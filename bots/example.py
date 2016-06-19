@@ -1,21 +1,20 @@
-from labots import Bot
+from __main__ import Bot
 
 class ExampleBot(Bot):
     targets = ['#lasttest']
     cmds = ['PRIVMSG']
     callbacks = None
 
-    def init():
+    def init(self):
         pass
 
-    def finalize():
+    def finalize(self):
         pass
 
 bot = ExampleBot()
 
-@bot.response
-def on_privmsg(sender, target, msg):
-    print('[on_privmsg]', sender, target, msg)
-    return (False, msg)
+@bot.callback
+def on_privmsg(nick, target, msg):
+    return (False, target, '{}: {}'.format(nick, msg))
 
 bot.callbacks = {'PRIVMSG': on_privmsg}

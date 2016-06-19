@@ -2,6 +2,19 @@
 
 import re
 import socket
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+hdr = logging.StreamHandler()
+hdr.setLevel(logging.DEBUG)
+
+fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fmter = logging.Formatter(fmt, None)
+
+hdr.setFormatter(fmt)
+logger.addHandler(hdr)
 
 class IRC(object):
     sock = None
@@ -15,17 +28,17 @@ class IRC(object):
         self.sock.send(bytes('NICK ' + nick + '\n', 'utf-8'))
         self.sock.send(bytes('USER ' + nick + ' ' + nick + ' ' + nick+ ' :' + nick + '\n', 'utf-8'))
 
-        print('[IRC]', 'connect to {0}:{1}'.format(host, port))
+        logger.info('Connecting to %s:%s', host, port)
 
 
     def join(self, chan):
         self.sock.send(bytes('JOIN ' + chan + '\n', 'utf-8'))
         self.chans.append(chan)
-        print('[IRC]', 'join', chan)
+
+        logger.info('Try to join %s', chan)
 
 
     def ping(self):
-        print('[IRC]', 'ping!')
         self.sock.send(bytes('PONG :pingis\n', 'utf-8'))
 
 
@@ -33,9 +46,9 @@ class IRC(object):
         try:
             self.sock.send(bytes('PRIVMSG ' + chan + ' :' + msg + '\n','utf-8'))
         except socket.error as err:
-            print('[IRC]', 'err: ', 'SOCKET ERROR', err)
+            logger.error('Scoket error %s', err)
         else:
-            print('[IRC]', 'send to {0}: {1}'.format(chan, msg))
+            logger.info('Send to %s:%s', chan, msg)
 
 
     def recv(self):
@@ -49,19 +62,19 @@ class IRC(object):
             msg_info = msg_pattern.match(data)
             if msg_info:
                 man, chan, msg = msg_info.groups()
-                print('[IRC]', 'recv msg: {0}@{1}: {2}'.format(man, chan, msg))
+                logger.info('Receive %s@%s: %s', man, chan, msg)
                 return (man, chan, msg)
 
         except socket.error as err:
-            print('[IRC]', 'err: ', 'SOCKET ERROR', err)
+            logger.error('Scoket error %s', err)
         except UnicodeDecodeError as err:
-            print('[IRC]', 'err: ', 'DECODE ERROR', err)
+            logger.error('Decode error %s', err)
         except re.error as err:
-            print('[IRC]', 'err: ', 'MATCH ERROR', err)
+            logger.error('Match error %s', err)
 
         return (None, None, None)
 
 
     def stop(self):
-        print('[IRC]', 'stop')
+        logger.info('Close socket')
         self.sock.close()

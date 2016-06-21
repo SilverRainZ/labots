@@ -6,34 +6,38 @@ import sys
 import logging
 import importlib
 import config
-from irc import IRC
+from irc import IRC, IRCMsg, IRCMsgType
 
 # Initialize logging
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 hdr = logging.StreamHandler()
 hdr.setLevel(logging.DEBUG)
 
-fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
 fmter = logging.Formatter(fmt, None)
 
 hdr.setFormatter(fmt)
 logger.addHandler(hdr)
 
 
+# IRC bot prototype
 class Bot(object):
+    # Private
+    _irc = None         # irc handle for sending message
+    _name = 'ProtoTypeBot'
+
+    # Public
     targets = None
     cmds = None
-    cmds_callback = None
-    _irc = None
+    callbacks = None
 
     def init(self):
-        logger.info('Default init function')
+        pass
 
     def finalize(self):
-        logger.info('Default finalize function')
+        pass
 
     def callback(self, func):
 
@@ -46,6 +50,8 @@ class Bot(object):
 
         return warpper
 
+
+# Check if a bot's members meet the requirements of labots
 def check_bot(bot):
     if not isinstance(bot.targets, list):
         logger.error('bot.target is no correctly defined')
@@ -76,34 +82,61 @@ def check_bot(bot):
 
     return True
 
+
 # Load all bots from modules in `config.mods`.
 # If a module is loaded, ignore it.
+# Return a list of bots
 def load_bots():
     bots = []
 
     for mod_name in config.mods:
         try:
             if mod_name in sys.modules:
-                importlib.reload(sys.modules[mod_name])
-                logger.info('Module "%s" has been loaded', mod_name)
+                logger.info('Bot "%s" has been loaded', mod_name)
             else:
                 mod = importlib.import_module(mod_name, None)
                 if check_bot(mod.bot):
-                    bots.append(mod.bot)
-                    logger.info('Module "%s" loaded', mod_name)
+                    try:
+                        mod.bot.init()
+                    except Exception as err:
+                        logger.error('Bot "%s" failed to initialize: %s', mod_name, err)
+                    else:
+                        mod.bot._name = mod_name
+                        bots.append(mod.bot)
+                        logger.info('Bot "%s" loaded', mod_name)
         except ImportError as err:
             logger.error('Import error "%s": %s', mod_name, err)
 
     return bots
 
 
+# Unload a specified bot from bots list
+# If force = True, remove this bot even if
+# it is failed to finalize
+def unload_bot(bots, bot, force = False):
+    try:
+        bot.finalize()
+    except Exception as err:
+        logger.error('Bot "%s" failed to finalize: %s', bot._name, err)
+        if force:
+            bots.remove(bot)
+    else:
+        logger.info('Bot "%s" unloaded', bot._name)
+        bots.remove(bot)
+
+
+def unload_bots(bots):
+    for bot in bots:
+        unload_bot(bots, bot)
+
+
 def main():
-    irc = IRC(config.host, config.port, config.nick)
+    irc = IRC(config.host, config.port)
+    irc.login('labots')
 
     bots = load_bots()
 
     for bot in bots:
-        bot.init()
         bot._irc = irc
 
     for bot in bots:
@@ -112,14 +145,19 @@ def main():
 
     while (True):
         try:
-            nick, target, msg = irc.recv()
-            if (nick, target, msg) == (None, None, None):
+            ircmsgs = irc.recv()
+
+            if not ircmsgs:
                 continue
 
-            for bot in bots:
-                bot.callbacks['PRIVMSG'](nick, target, msg)
+            for ircmsg in ircmsgs:
+                if ircmsg.command == 'PRIVMSG':
+                    for bot in bots:
+                        bot.callbacks['PRIVMSG'](
+                                ircmsg.nick, ircmsg.args[0], ircmsg.msg)
 
         except KeyboardInterrupt:
+            unload_bots(bots)
             irc.stop()
             logger.info('Exit.')
             os._exit(0)

@@ -27,7 +27,6 @@ class IRCMsgType(Enum):
     ERROR = 2
     MSG = 3
     UNKNOW = 4
-    SCKERR = 5
 
 
 class IRCMsg(object):
@@ -37,7 +36,7 @@ class IRCMsg(object):
     host = ''
 
     # Command
-    command = ''
+    cmd = ''
 
     # Middle
     args = []
@@ -144,6 +143,9 @@ class IRC(object):
             # <params> ::= <SPACE> [ ':' <trailing> | <middle> <params> ]
             middle, _, trailing = params.partition(' :')
             logger.debug('middle: "%s", trailing: "%s"', middle, trailing)
+            if middle.startswith(':'):
+                trailing = middle[1:]
+                middle = ''
 
             if not middle and not trailing:
                 raise Exception('No <middle> and <trailing>')
@@ -168,7 +170,7 @@ class IRC(object):
             ircmsg.nick = nick[1:]  # strip ':'
             ircmsg.user = user
             ircmsg.host = host
-            ircmsg.command = command
+            ircmsg.cmd = command
             ircmsg.args = args
             ircmsg.msg = trailing
             return (IRCMsgType.MSG, ircmsg)
@@ -180,24 +182,18 @@ class IRC(object):
             self.pong()
         elif type_ == IRCMsgType.ERROR:
             pass
+        elif type_ == IRCMsgType.MSG:
+            if ircmsg.cmd == RPL_WELCOME:
+                self.nick = ircmsg.args[0]
+            elif ircmsg.cmd == ERR_NICKNAMEINUSE:
+                new_nick = ircmsg.args[1] + '_'
+                logger.info('Nick already in use, use "%s"', new_nick)
+                self.chnick(new_nick)
+            elif ircmsg.cmd == 'JOIN' and ircmsg.nick == self.nick:
+                self.chans.append(ircmsg.args[0])
+            elif ircmsg.cmd == 'PART' and ircmsg.nick == self.nick:
+                self.chans.remove(ircmsg.args[0])
 
-        if type_ != IRCMsgType.MSG:
-            return False
-
-        if ircmsg.command == RPL_WELCOME:
-            self.nick = ircmsg.nick
-            return False
-        elif ircmsg.command == ERR_NICKNAMEINUSE:
-            new_nick = ircmsg.args[1] + '_'
-            logger.info('Nick already in use, use "%s"', new_nick)
-            self.chnick(new_nick)
-            return False
-        elif ircmsg.command == 'JOIN' and ircmsg.nick == self.nick:
-            self.chans.append(ircmsg.args[0])
-        elif ircmsg.command == 'PART' and ircmsg.nick == self.nick:
-            self.chans.remove(ircmsg.args[0])
-
-        return True
 
     # Receive irc message from server, return a list of IRCMsg).
     # If None returned, connection should be closed
@@ -205,6 +201,7 @@ class IRC(object):
         data = self._sock_recv()
         if not data:
             logger.info('No data recvived, stop')
+            # TODO: reconnect
             return None
 
         if self._buf:
@@ -224,12 +221,8 @@ class IRC(object):
         msgs = [ x for x in msgs if x ]
         for msg in msgs:
             type_, ircmsg = self._parse(msg)
-            if self._resp(type_, ircmsg):
-                ircmsgs.append(ircmsg)
-
-        if not ircmsgs:
-            # Danger of stackoverflow
-            return self.recv()
+            self._resp(type_, ircmsg)
+            ircmsgs.append((type_, ircmsg))
 
         return ircmsgs
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- encoding: UTF-8 -*-
 
-import os
 import sys
 import logging
 import importlib
@@ -29,9 +28,9 @@ class Bot(object):
     _name = 'ProtoTypeBot'
 
     # Public
-    targets = None
-    cmds = None
-    callbacks = None
+    targets = []
+    trig_cmds = []
+    trig_keys = []
 
     def init(self):
         pass
@@ -39,16 +38,28 @@ class Bot(object):
     def finalize(self):
         pass
 
-    def callback(self, func):
 
-        def warpper(*args, **kw):
-            pass_, target, msg = func(*args, **kw)
-            logger.debug('%s(): pass: %s, target: %s, msg: %s',
-                    func.__name__, pass_, target, msg)
-            self._irc.send('#lasttest', msg)
-            return pass_
+# Decorator for callback functions in `Bot`
+def echo(func):
+    def warpper(self, *args, **kw):
+        pass_, target, msg = func(self, *args, **kw)
+        logger.debug('%s(): pass: %s, target: %s, msg: %s',
+                func.__name__, pass_, target, msg)
+        if target and msg:
+            self._irc.send(target, msg)
+        return pass_
+    return warpper
 
-        return warpper
+
+# Decorator for callback functions in `Bot`
+def broadcast(func):
+    def warpper(self, *args, **kw):
+        pass_, targets, msg = func(self, *args, **kw)
+        logger.debug('%s(): pass: %s, msg: %s', func.__name__, pass_, msg)
+        if msg:
+            [ self._irc.send(t, msg) for t in targets]
+        return pass_
+    return warpper
 
 
 # Check if a bot's members meet the requirements of labots
@@ -57,12 +68,12 @@ def check_bot(bot):
         logger.error('bot.target is no correctly defined')
         return False
 
-    if not isinstance(bot.cmds, list):
-        logger.error('bot.cmds is no correctly defined')
+    if not isinstance(bot.trig_cmds, list):
+        logger.error('bot.trig_cmds is no correctly defined')
         return False
 
-    if not isinstance(bot.callbacks, dict):
-        logger.error('bot.callbacks is no correctly defined')
+    if not isinstance(bot.trig_keys, list):
+        logger.error('bot.trig_keys is no correctly defined')
         return False
 
     if not hasattr(bot.init, '__call__'):
@@ -73,12 +84,7 @@ def check_bot(bot):
         logger.error('bot.init() is no correctly defined')
         return False
 
-    # Check callback functions
-    for cmd in bot.cmds:
-        if not cmd in bot.callbacks \
-                or not hasattr(bot.callbacks[cmd], '__call__'):
-            logger.error('bot.callbacks["%s"] is no correctly defined', cmd)
-            return False
+    # TODO: Check callback functions
 
     return True
 
@@ -118,16 +124,68 @@ def unload_bot(bots, bot, force = False):
         bot.finalize()
     except Exception as err:
         logger.error('Bot "%s" failed to finalize: %s', bot._name, err)
-        if force:
-            bots.remove(bot)
-    else:
-        logger.info('Bot "%s" unloaded', bot._name)
-        bots.remove(bot)
+        if not force:
+            return
+    bots.remove(bot)
+    logger.info('Bot "%s" unloaded', bot._name)
 
 
 def unload_bots(bots):
-    for bot in bots:
-        unload_bot(bots, bot)
+    while bots:
+        unload_bot(bots, bots[0], force = True)
+
+
+def dispatch(bots, type_, ircmsg):
+    if type_ != IRCMsgType.MSG:
+        return
+
+    if ircmsg.cmd[0] in ['4', '5']:
+        logger.error('Error message: %s', ircmsg)
+    elif ircmsg.cmd == 'JOIN':
+        chan = ircmsg.args[0]
+        for bot in bots:
+            if ircmsg.cmd in bot.trig_cmds and chan in bot.targets:
+                try:
+                    if not bot.on_join(ircmsg.nick, chan):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_join() failed: %s', bot._name, err)
+    elif ircmsg.cmd == 'PART':
+        chan, reason = ircmsg.args[0], ircmsg.msg
+        for bot in bots:
+            if ircmsg.cmd in bot.trig_cmds and chan in bot.targets:
+                try:
+                    if not bot.on_part(ircmsg.nick, chan, reason):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_part() failed: %s',bot._name, err)
+    elif ircmsg.cmd == 'QUIT':
+        reason = ircmsg.msg
+        for bot in bots:
+            if ircmsg.cmd in bot.trig_cmds:
+                try:
+                    if not bot.on_quit(ircmsg.nick, reason):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_quit() failed: %s', bot._name, err)
+    elif ircmsg.cmd == 'NICK':
+        new_nick = ircmsg.msg
+        for bot in bots:
+            if ircmsg.cmd in bot.trig_cmds:
+                try:
+                    if not bot.on_nick(ircmsg.nick, new_nick):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_nick() failed: %s', bot._name, err)
+    elif ircmsg.cmd == 'PRIVMSG':
+        chan = ircmsg.args[0]
+        for bot in bots:
+            if ircmsg.cmd in bot.trig_cmds and chan in bot.targets:
+                try:
+                    if not bot.on_privmsg(ircmsg.nick, chan, ircmsg.msg):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_privmsg() failed: %s', bot._name, ircmsg.cmd, err)
 
 
 def main():
@@ -138,8 +196,6 @@ def main():
 
     for bot in bots:
         bot._irc = irc
-
-    for bot in bots:
         for chan in bot.targets:
             irc.join(chan)
 
@@ -147,20 +203,14 @@ def main():
         try:
             ircmsgs = irc.recv()
 
-            if not ircmsgs:
-                continue
-
-            for ircmsg in ircmsgs:
-                if ircmsg.command == 'PRIVMSG':
-                    for bot in bots:
-                        bot.callbacks['PRIVMSG'](
-                                ircmsg.nick, ircmsg.args[0], ircmsg.msg)
+            for type_, ircmsg in ircmsgs:
+                dispatch(bots, type_, ircmsg)
 
         except KeyboardInterrupt:
             unload_bots(bots)
             irc.stop()
             logger.info('Exit.')
-            os._exit(0)
+            return 0
 
 if __name__ == '__main__':
     main()

@@ -4,21 +4,14 @@
 import re
 import socket
 import logging
-from irc_magic import *
+import functools
+from ircmagic import *
 from enum import Enum
+from tornado.ioloop import IOLoop
+from tornado.iostream import IOStream
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-hdr = logging.StreamHandler()
-hdr.setLevel(logging.DEBUG)
-
-fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
-fmter = logging.Formatter(fmt, None)
-
-hdr.setFormatter(fmt)
-logger.addHandler(hdr)
 
 
 class IRCMsgType(Enum):
@@ -48,45 +41,54 @@ class IRCMsg(object):
 class IRC(object):
     # Private
     _sock = None
+    _stream = None
     _charset = None
-    _buf = []
+    _ioloop = None
+    _after_login = None
+    _dispath = None
 
     # Public
     nick = None
     chans = []
+    dispatch = None
 
-    def __init__(self, host, port, charset = 'utf-8'):
-        self._charset = charset
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # self._sock.settimeout(20)
-        self._sock.connect((host, port))
+    def __init__(self, host, port, nick,
+            after_login = None, dispatch = None,
+            charset = 'utf-8', ioloop = False):
 
         logger.info('Connecting to %s:%s', host, port)
 
+        self.nick = nick
+        self._after_login = after_login
+        self._dispath = dispatch
+        self._charset = charset
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # self._sock.settimeout(20)
+        self._ioloop = ioloop or IOLoop.instance()
+        self._stream = IOStream(self._sock, io_loop = self._ioloop)
+        self._stream.connect((host, port), self.login)
+
 
     def _sock_send(self, data):
-        return self._sock.send(bytes(data, self._charset))
+        return self._stream.write(bytes(data, self._charset))
 
 
     def _sock_recv(self):
-        data = self._sock.recv(2048)
-        return data.decode(self._charset)
+        self._stream.read_until(b'\r\n', self.recv)
 
 
     def chnick(self, nick):
         self._sock_send('NICK %s\r\n' % nick)
 
 
-    def login(self, nick):
-        logger.info('Try to login as "%s"', nick)
+    def login(self):
+        logger.info('Try to login as "%s"', self.nick)
 
-        self.chnick(nick)
-        self._sock_send('USER %s %s %s %s\r\n' % (nick, 'labots',
+        self.chnick(self.nick)
+        self._sock_send('USER %s %s %s %s\r\n' % (self.nick, 'labots',
             'localhost', 'lastavengers#outlook.com'))
 
-        while not self.nick:
-            self.recv()
-        logger.info('You are now logined as "%s"', self.nick)
+        self._sock_recv()
 
 
     def join(self, chan):
@@ -185,6 +187,7 @@ class IRC(object):
         elif type_ == IRCMsgType.MSG:
             if ircmsg.cmd == RPL_WELCOME:
                 self.nick = ircmsg.args[0]
+                self._after_login(self)
             elif ircmsg.cmd == ERR_NICKNAMEINUSE:
                 new_nick = ircmsg.args[1] + '_'
                 logger.info('Nick already in use, use "%s"', new_nick)
@@ -197,34 +200,15 @@ class IRC(object):
 
     # Receive irc message from server, return a list of IRCMsg).
     # If None returned, connection should be closed
-    def recv(self):
-        data = self._sock_recv()
-        if not data:
-            logger.info('No data recvived, stop')
-            # TODO: reconnect
-            return None
+    def recv(self, data):
+        msg =  data.decode(self._charset)
 
-        if self._buf:
-            data = self._buf + data
-            self._buf = []
+        type_, ircmsg = self._parse(msg)
+        self._resp(type_, ircmsg)
 
-        # If the data contains complete messages
-        complete =  data.endswith('\r\n')
-        msgs = data.split('\r\n')
+        self._dispath(type_, ircmsg)
 
-        if not complete:
-            logger.debug('Incomplete messages: %s', repr(msgs[-1]))
-            self._buf = msgs[-1]
-            msgs = msgs[:-1]
-
-        ircmsgs = []
-        msgs = [ x for x in msgs if x ]
-        for msg in msgs:
-            type_, ircmsg = self._parse(msg)
-            self._resp(type_, ircmsg)
-            ircmsgs.append((type_, ircmsg))
-
-        return ircmsgs
+        self._sock_recv()
 
 
     def quit(self, reason = '食饭'):

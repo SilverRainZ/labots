@@ -1,4 +1,4 @@
-from __main__ import Bot, echo, broadcast
+from bot import Bot, echo, broadcast
 
 class ExampleBot(Bot):
     targets = ['#lasttest', '#nexttest']

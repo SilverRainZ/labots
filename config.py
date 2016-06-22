@@ -1,8 +1,4 @@
-import sys
-
-host = "irc.freenode.net"
+host = 'irc.freenode.net'
 port = 6666
-nick = "labots"
-
-sys.path.append('./bots')
-mods = ['example']
+nick = 'labots'
+path = 'bots'

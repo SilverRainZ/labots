@@ -3,8 +3,10 @@
 
 import sys
 import logging
-import importlib
 import config
+import functools
+from tornado.ioloop import IOLoop
+from botbox import BotBox
 from irc import IRC, IRCMsg, IRCMsgType
 
 # Initialize logging
@@ -19,120 +21,6 @@ fmter = logging.Formatter(fmt, None)
 
 hdr.setFormatter(fmt)
 logger.addHandler(hdr)
-
-
-# IRC bot prototype
-class Bot(object):
-    # Private
-    _irc = None         # irc handle for sending message
-    _name = 'ProtoTypeBot'
-
-    # Public
-    targets = []
-    trig_cmds = []
-    trig_keys = []
-
-    def init(self):
-        pass
-
-    def finalize(self):
-        pass
-
-
-# Decorator for callback functions in `Bot`
-def echo(func):
-    def warpper(self, *args, **kw):
-        pass_, target, msg = func(self, *args, **kw)
-        logger.debug('%s(): pass: %s, target: %s, msg: %s',
-                func.__name__, pass_, target, msg)
-        if target and msg:
-            self._irc.send(target, msg)
-        return pass_
-    return warpper
-
-
-# Decorator for callback functions in `Bot`
-def broadcast(func):
-    def warpper(self, *args, **kw):
-        pass_, targets, msg = func(self, *args, **kw)
-        logger.debug('%s(): pass: %s, msg: %s', func.__name__, pass_, msg)
-        if msg:
-            [ self._irc.send(t, msg) for t in targets]
-        return pass_
-    return warpper
-
-
-# Check if a bot's members meet the requirements of labots
-def check_bot(bot):
-    if not isinstance(bot.targets, list):
-        logger.error('bot.target is no correctly defined')
-        return False
-
-    if not isinstance(bot.trig_cmds, list):
-        logger.error('bot.trig_cmds is no correctly defined')
-        return False
-
-    if not isinstance(bot.trig_keys, list):
-        logger.error('bot.trig_keys is no correctly defined')
-        return False
-
-    if not hasattr(bot.init, '__call__'):
-        logger.error('bot.init() is no correctly defined')
-        return False
-
-    if not hasattr(bot.finalize, '__call__'):
-        logger.error('bot.init() is no correctly defined')
-        return False
-
-    # TODO: Check callback functions
-
-    return True
-
-
-# Load all bots from modules in `config.mods`.
-# If a module is loaded, ignore it.
-# Return a list of bots
-def load_bots():
-    bots = []
-
-    for mod_name in config.mods:
-        try:
-            if mod_name in sys.modules:
-                logger.info('Bot "%s" has been loaded', mod_name)
-            else:
-                mod = importlib.import_module(mod_name, None)
-                if check_bot(mod.bot):
-                    try:
-                        mod.bot.init()
-                    except Exception as err:
-                        logger.error('Bot "%s" failed to initialize: %s', mod_name, err)
-                    else:
-                        mod.bot._name = mod_name
-                        bots.append(mod.bot)
-                        logger.info('Bot "%s" loaded', mod_name)
-        except ImportError as err:
-            logger.error('Import error "%s": %s', mod_name, err)
-
-    return bots
-
-
-# Unload a specified bot from bots list
-# If force = True, remove this bot even if
-# it is failed to finalize
-def unload_bot(bots, bot, force = False):
-    try:
-        bot.finalize()
-    except Exception as err:
-        logger.error('Bot "%s" failed to finalize: %s', bot._name, err)
-        if not force:
-            return
-    bots.remove(bot)
-    logger.info('Bot "%s" unloaded', bot._name)
-
-
-def unload_bots(bots):
-    while bots:
-        unload_bot(bots, bots[0], force = True)
 
 
 def dispatch(bots, type_, ircmsg):
@@ -185,32 +73,28 @@ def dispatch(bots, type_, ircmsg):
                     if not bot.on_privmsg(ircmsg.nick, chan, ircmsg.msg):
                         break
                 except Exception as err:
-                    logger.error('"%s".on_privmsg() failed: %s', bot._name, ircmsg.cmd, err)
+                    logger.error('"%s".on_privmsg() failed: %s', bot._name, err)
 
 
 def main():
-    irc = IRC(config.host, config.port)
-    irc.login('labots')
+    botbox = BotBox(config.path)
 
-    bots = load_bots()
+    callback = functools.partial(dispatch, botbox.bots)
+    irc = IRC(config.host, config.port, 'labots',
+            after_login = botbox.start, dispatch = callback)
 
-    for bot in bots:
-        bot._irc = irc
-        for chan in bot.targets:
-            irc.join(chan)
+    # for bot in bots:
+        # bot._irc = irc
+        # for chan in bot.targets:
+            # irc.join(chan)
 
-    while (True):
-        try:
-            ircmsgs = irc.recv()
-
-            for type_, ircmsg in ircmsgs:
-                dispatch(bots, type_, ircmsg)
-
-        except KeyboardInterrupt:
-            unload_bots(bots)
-            irc.stop()
-            logger.info('Exit.')
-            return 0
+    try:
+        IOLoop.instance().start()
+    except KeyboardInterrupt:
+        botbox.stop()
+        IOLoop.instance().stop()
+        logger.info('Exit.')
+        return 0
 
 if __name__ == '__main__':
     main()

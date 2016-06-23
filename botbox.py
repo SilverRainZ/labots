@@ -82,6 +82,7 @@ class BotBox(object):
     path = None
     irc = None
     bots = []
+    chans = {}
 
     def __init__(self, path, ioloop = None):
         self.path = path
@@ -121,7 +122,7 @@ class BotBox(object):
                     if self._irc:
                         mod.bot._irc = self._irc
                         for t in mod.bot.targets:
-                            self._irc.join(t)
+                            self._join(t)
                     logger.info('Bot "%s" is loaded', modname)
                     return True
         except Exception as err:
@@ -140,8 +141,32 @@ class BotBox(object):
             logger.error('Bot "%s" failed to finalize: %s', bot._name, err)
 
         self.bots.remove(bot)
+        for t in bot.targets:
+            self._part(t)
         logger.info('Bot "%s" is unloaded', bot._name)
         return True
+
+    def _join(self, chan):
+        if chan[0] not in ['#', '&']:
+            return
+
+        if chan in self.chans:
+            self.chans[chan] += 1
+        else:
+            self.chans[chan] = 1
+            self._irc.join(chan)
+
+    def _part(self, chan):
+        if chan[0] not in ['#', '&']:
+            return
+        if chan not in self.chans:
+            return
+
+        if self.chans[chan] != 1:
+            self.chans[chan] -= 1
+        else:
+            self.chans.pop(chan, None)
+            self._irc.part(chan)
 
     def start(self, irc):
         self._irc = irc

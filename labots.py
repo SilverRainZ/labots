@@ -83,11 +83,6 @@ def main():
     irc = IRC(config.host, config.port, 'labots',
             after_login = botbox.start, dispatch = callback)
 
-    # for bot in bots:
-        # bot._irc = irc
-        # for chan in bot.targets:
-            # irc.join(chan)
-
     try:
         IOLoop.instance().start()
     except KeyboardInterrupt:

@@ -202,7 +202,8 @@ class IRC(object):
         elif type_ == IRCMsgType.MSG:
             if ircmsg.cmd == RPL_WELCOME:
                 self.nick = ircmsg.args[0]
-                self._after_login(self)
+                if self._after_login:
+                    self._after_login(self)
             elif ircmsg.cmd == ERR_NICKNAMEINUSE:
                 new_nick = ircmsg.args[1] + '_'
                 logger.info('Nick already in use, use "%s"', new_nick)
@@ -219,7 +220,8 @@ class IRC(object):
         if msg:
             type_, ircmsg = self._parse(msg)
             self._resp(type_, ircmsg)
-            self._dispath(type_, ircmsg)
+            if self._dispath:
+                self._dispath(type_, ircmsg)
 
         self._sock_recv()
 

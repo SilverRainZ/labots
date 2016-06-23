@@ -1,4 +1,41 @@
 LABOTS
-------
+======
 
 IRC bot framework written in python 3.x, just works for myself.
+
+NOT FINISHED YET.
+
+Features
+--------
+
+* Run multiple bots with single IRC bot
+* Useful IRC bot interface
+* Dynamic {load,unload} bots (Pyinotify)
+* Asynchronous socket and IO (Tornado)
+
+
+Requires
+--------
+
+* Python 3
+* Pyinotify 0.9.4
+* Tornado 3.2.2
+
+
+Usage
+-----
+TODO, plz see `bot/example.py` firstly.
+
+
+References
+----------
+
+* https://github.com/lilydjwg/archrepo2
+* https://github.com/nod/iobot
+* https://github.com/LukeusMaximus/Python-IRC-Bot-Framework
+
+
+License
+-------
+
+GPL3

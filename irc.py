@@ -12,6 +12,16 @@ from tornado.iostream import IOStream
 
 # Initialize logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+hdr = logging.StreamHandler()
+hdr.setLevel(logging.INFO)
+
+fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
+fmter = logging.Formatter(fmt, None)
+
+hdr.setFormatter(fmt)
+logger.addHandler(hdr)
 
 
 class IRCMsgType(Enum):

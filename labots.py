@@ -11,10 +11,10 @@ from irc import IRC, IRCMsg, IRCMsgType
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 hdr = logging.StreamHandler()
-hdr.setLevel(logging.DEBUG)
+hdr.setLevel(logging.INFO)
 
 fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
 fmter = logging.Formatter(fmt, None)

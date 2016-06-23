@@ -28,7 +28,7 @@ def dispatch(bots, type_, ircmsg):
         return
 
     if ircmsg.cmd[0] in ['4', '5']:
-        logger.error('Error message: %s', ircmsg)
+        logger.error('Error message: %s', ircmsg.msg)
     elif ircmsg.cmd == 'JOIN':
         chan = ircmsg.args[0]
         for bot in bots:

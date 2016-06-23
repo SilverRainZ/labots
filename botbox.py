@@ -51,7 +51,7 @@ class EventHandler(pyinotify.ProcessEvent):
 
     def process_IN_CREATE(self, event):
         logger.debug('%s', event)
-        if event.path == 'bots' \
+        if event.path == self.botbox.path \
                 and event.name.endswith('.py') \
                 and not event.name.startswith('_'):
             self.botbox._load(event.name)
@@ -59,7 +59,7 @@ class EventHandler(pyinotify.ProcessEvent):
 
     def process_IN_DELETE(self, event):
         logger.debug('%s', event)
-        if event.path == 'bots' \
+        if event.path == self.botbox.path \
                 and event.name.endswith('.py') \
                 and not event.name.startswith('_'):
             self.botbox._unload(event.name)
@@ -67,12 +67,11 @@ class EventHandler(pyinotify.ProcessEvent):
 
     def process_IN_MODIFY(self, event):
         logger.debug('%s', event)
-        if event.path == 'bots' \
+        if event.path == self.botbox.path \
                 and event.name.endswith('.py') \
                 and not event.name.startswith('_'):
             self.botbox._unload(event.name)
             self.botbox._load(event.name)
-
 
 
 class BotBox(object):
@@ -158,6 +157,7 @@ class BotBox(object):
                 pyinotify.IN_MODIFY ,
                 rec = False)
 
+        logger.info('path: %s', self.path)
         handle = EventHandler(self)
         self._notifier = pyinotify.TornadoAsyncNotifier(
                 wm, self._ioloop, default_proc_fun = handle)

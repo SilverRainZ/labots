@@ -166,7 +166,7 @@ class BotBox(object):
     def stop(self):
         while self.bots:
             self._unload(self.bots[0]._filename)
-        notifier.stop()
+        self._notifier.stop()
 
 
 

@@ -74,7 +74,12 @@ class IRC(object):
 
 
     def _sock_recv(self):
-        self._stream.read_until(b'\r\n', self.recv)
+        def _recv(data):
+            msg = data.decode(self._charset)
+            msg = msg[:-2]
+            self.recv(msg)
+
+        self._stream.read_until(b'\r\n', _recv)
 
 
     def chnick(self, nick):
@@ -200,13 +205,11 @@ class IRC(object):
 
     # Receive irc message from server, return a list of IRCMsg).
     # If None returned, connection should be closed
-    def recv(self, data):
-        msg =  data.decode(self._charset)
-
-        type_, ircmsg = self._parse(msg)
-        self._resp(type_, ircmsg)
-
-        self._dispath(type_, ircmsg)
+    def recv(self, msg):
+        if msg:
+            type_, ircmsg = self._parse(msg)
+            self._resp(type_, ircmsg)
+            self._dispath(type_, ircmsg)
 
         self._sock_recv()
 

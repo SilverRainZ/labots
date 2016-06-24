@@ -165,7 +165,7 @@ class IRC(object):
     # Response server message
     def _resp(self, type_, ircmsg):
         if type_ == IRCMsgType.PING:
-            self.pong()
+            self._pong()
         elif type_ == IRCMsgType.ERROR:
             pass
         elif type_ == IRCMsgType.MSG:

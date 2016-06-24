@@ -50,32 +50,31 @@ class IRCMsg(object):
 
 class IRC(object):
     # Private
-    _sock = None
     _stream = None
     _charset = None
     _ioloop = None
-    _after_login = None
-    _dispath = None
 
     # Public
     nick = None
     chans = []
-    dispatch = None
+    after_login = None
+    on_recv = None
 
     def __init__(self, host, port, nick,
-            after_login = None, dispatch = None,
+            after_login = None, on_recv = None,
             charset = 'utf-8', ioloop = False):
 
         logger.info('Connecting to %s:%s', host, port)
 
         self.nick = nick
-        self._after_login = after_login
-        self._dispath = dispatch
+        self.after_login = after_login
+        self.on_recv = on_recv
+
         self._charset = charset
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # self._sock.settimeout(20)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # sock.settimeout(20)
         self._ioloop = ioloop or IOLoop.instance()
-        self._stream = IOStream(self._sock, io_loop = self._ioloop)
+        self._stream = IOStream(sock, io_loop = self._ioloop)
         self._stream.connect((host, port), self.login)
 
 
@@ -202,8 +201,8 @@ class IRC(object):
         elif type_ == IRCMsgType.MSG:
             if ircmsg.cmd == RPL_WELCOME:
                 self.nick = ircmsg.args[0]
-                if self._after_login:
-                    self._after_login(self)
+                if self.after_login:
+                    self.after_login()
             elif ircmsg.cmd == ERR_NICKNAMEINUSE:
                 new_nick = ircmsg.args[1] + '_'
                 logger.info('Nick already in use, use "%s"', new_nick)
@@ -214,14 +213,12 @@ class IRC(object):
                 self.chans.remove(ircmsg.args[0])
 
 
-    # Receive irc message from server, return a list of IRCMsg).
-    # If None returned, connection should be closed
     def recv(self, msg):
         if msg:
             type_, ircmsg = self._parse(msg)
             self._resp(type_, ircmsg)
-            if self._dispath:
-                self._dispath(type_, ircmsg)
+            if self.on_recv:
+                self.on_recv(type_, ircmsg)
 
         self._sock_recv()
 
@@ -232,5 +229,6 @@ class IRC(object):
 
 
     def stop(self):
+        logger.info('Stop')
         self.quit()
-        self._sock.close()
+        self._stream.close()

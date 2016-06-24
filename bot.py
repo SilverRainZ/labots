@@ -18,9 +18,9 @@ logger.addHandler(hdr)
 # IRC bot prototype
 class Bot(object):
     # Private for subclass
-    _irc = None
     _name = None
     _filename = None
+    _send_handler = None
 
     # Public for sub class
     targets = []
@@ -42,7 +42,11 @@ def echo(func):
         logger.debug('%s(): pass: %s, target: %s, msg: %s',
                 func.__name__, pass_, target, msg)
         if target and msg:
-            self._irc.send(target, msg)
+            if self._send_handler:
+                self._send_handler(target, msg)
+            else:
+                logger.error('%s(): "%s"._send_handler is invaild',
+                        func.__name__, self._name)
         return pass_
     return warpper
 
@@ -53,6 +57,10 @@ def broadcast(func):
         pass_, targets, msg = func(self, *args, **kw)
         logger.debug('%s(): pass: %s, msg: %s', func.__name__, pass_, msg)
         if msg:
-            [ self._irc.send(t, msg) for t in targets]
+            if self._send_handler:
+                [ self._send_handler(t, msg) for t in targets]
+            else:
+                logger.error('%s(): "%s"._send_handler is invaild',
+                        func.__name__, self._name)
         return pass_
     return warpper

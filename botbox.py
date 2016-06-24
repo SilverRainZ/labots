@@ -77,14 +77,17 @@ class EventHandler(pyinotify.ProcessEvent):
 class BotBox(object):
     _ioloop = None
     _notifier = None
-    _irc = None
 
     path = None
-    irc = None
     bots = []
     chans = {}
+    send_handler = None
+    join_handler = None
+    part_handler = None
 
     def __init__(self, path, ioloop = None):
+        logger.info('Path: "%s"', path)
+
         self.path = path
         sys.path.append(path)
         self._ioloop = ioloop or IOLoop.instance()
@@ -119,10 +122,9 @@ class BotBox(object):
                     mod.bot._filename = filename
                     mod.bot._name = modname
                     self.bots.append(mod.bot)
-                    if self._irc:
-                        mod.bot._irc = self._irc
-                        for t in mod.bot.targets:
-                            self._join(t)
+                    mod.bot._send_handler = self.send_handler
+                    for t in mod.bot.targets:
+                        self._join(t)
                     logger.info('Bot "%s" is loaded', modname)
                     return True
         except Exception as err:
@@ -154,7 +156,10 @@ class BotBox(object):
             self.chans[chan] += 1
         else:
             self.chans[chan] = 1
-            self._irc.join(chan)
+            if self.join_handler:
+                self.join_handler(chan)
+            else:
+                logger.error('Invaild join_handler')
 
     def _part(self, chan):
         if chan[0] not in ['#', '&']:
@@ -166,11 +171,12 @@ class BotBox(object):
             self.chans[chan] -= 1
         else:
             self.chans.pop(chan, None)
-            self._irc.part(chan)
+            if self.part_handler:
+                self.part_handler(chan)
+            else:
+                logger.error('Invaild join_handler')
 
-    def start(self, irc):
-        self._irc = irc
-
+    def start(self):
         for f in os.listdir(self.path):
             if f.endswith('.py') and not f.startswith('_'):
                 self._load(f)
@@ -182,10 +188,15 @@ class BotBox(object):
                 pyinotify.IN_MODIFY ,
                 rec = False)
 
-        logger.info('path: %s', self.path)
         handle = EventHandler(self)
         self._notifier = pyinotify.TornadoAsyncNotifier(
                 wm, self._ioloop, default_proc_fun = handle)
+
+
+    def set_handler(self, send, join, part):
+        self.send_handler = send
+        self.join_handler = join
+        self.part_handler = part
 
 
     def stop(self):
@@ -197,7 +208,8 @@ class BotBox(object):
 
 if __name__ == '__main__':
     box = BotBox('bots')
-    box.start(None)
+    box.set_handler(None, None, None)
+    box.start()
     try:
         IOLoop.instance().start()
     except KeyboardInterrupt:

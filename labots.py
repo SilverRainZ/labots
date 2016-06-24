@@ -81,12 +81,15 @@ def main():
 
     callback = functools.partial(dispatch, botbox.bots)
     irc = IRC(config.host, config.port, 'labots',
-            after_login = botbox.start, dispatch = callback)
+            after_login = botbox.start, on_recv = callback)
+
+    botbox.set_handler(irc.send, irc.join, irc.part)
 
     try:
         IOLoop.instance().start()
     except KeyboardInterrupt:
         botbox.stop()
+        irc.stop()
         IOLoop.instance().stop()
         logger.info('Exit.')
         return 0

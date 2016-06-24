@@ -213,4 +213,5 @@ if __name__ == '__main__':
     try:
         IOLoop.instance().start()
     except KeyboardInterrupt:
+        box.stop()
         IOLoop.instance().stop()

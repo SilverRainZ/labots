@@ -2,13 +2,15 @@
 # RFC 2812 Incomplete Implement
 
 import re
+import time
 import socket
 import logging
 import functools
 from ircmagic import *
 from enum import Enum
-from tornado.ioloop import IOLoop
+from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.iostream import IOStream
+from threading import Timer
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -53,8 +55,12 @@ class IRC(object):
     _stream = None
     _charset = None
     _ioloop = None
+    _timer = None
+    _last_pong = None
 
     # Public
+    host = None
+    port = None
     nick = None
     chans = []
     after_login = None
@@ -66,6 +72,8 @@ class IRC(object):
 
         logger.info('Connecting to %s:%s', host, port)
 
+        self.host = host
+        self.port = port
         self.nick = nick
         self.after_login = after_login
         self.on_recv = on_recv
@@ -75,8 +83,12 @@ class IRC(object):
         # sock.settimeout(20)
         self._ioloop = ioloop or IOLoop.instance()
         self._stream = IOStream(sock, io_loop = self._ioloop)
-        self._stream.connect((host, port), self.login)
+        self._stream.connect((host, port), self._login)
 
+        self._last_pong = time.time()
+        self._timer = PeriodicCallback(self._keep_alive,
+                60 * 1000, io_loop=self._ioloop)
+        self._timer.start()
 
     def _sock_send(self, data):
         return self._stream.write(bytes(data, self._charset))
@@ -85,51 +97,19 @@ class IRC(object):
     def _sock_recv(self):
         def _recv(data):
             msg = data.decode(self._charset)
-            msg = msg[:-2]
-            self.recv(msg)
+            msg = msg[:-2]  # strip '\r\n'
+            self._recv(msg)
 
         self._stream.read_until(b'\r\n', _recv)
 
 
-    def chnick(self, nick):
-        self._sock_send('NICK %s\r\n' % nick)
+    def _reconnect(self):
+        logger.info('Reconnecting...')
 
-
-    def login(self):
-        logger.info('Try to login as "%s"', self.nick)
-
-        self.chnick(self.nick)
-        self._sock_send('USER %s %s %s %s\r\n' % (self.nick, 'labots',
-            'localhost', 'lastavengers#outlook.com'))
-
-        self._sock_recv()
-
-
-    def join(self, chan):
-        self._sock_send('JOIN %s\r\n' % chan)
-        logger.info('Try to join %s', chan)
-
-
-    def part(self, chan):
-        self._sock_send('PART %s\r\n' % chan)
-        logger.info('Try to part %s', chan)
-
-
-    def pong(self):
-        self._sock_send('PONG :labots!\n')
-        logger.debug('Pong!')
-
-
-    def send(self, target, msg):
-        self._sock_send('PRIVMSG %s :%s\r\n' % (target, msg))
-
-
-    def action(self, target, msg):
-        self._sock_send('PRIVMSG %s :\1ACTION %s\1\r\n')
-
-
-    def topic(self, chan, topic):
-        self._sock_send('TOPIC %s :%s\r\n' % (chan, topic))
+        self._stream.close()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._stream = IOStream(sock, io_loop = self._ioloop)
+        self._stream.connect((self.host, self.port), self._login)
 
 
     # IRC message parser, return tuple (IRCMsgType, IRCMsg)
@@ -146,7 +126,6 @@ class IRC(object):
 
         try:
             # <message> ::= [':' <prefix> <SPACE> ] <command> <params> <crlf>
-            # <crlf> has been striped by recv()
             tmp = msg.split(' ', maxsplit = 2)
 
             if len(tmp) != 3:
@@ -192,7 +171,7 @@ class IRC(object):
             return (IRCMsgType.MSG, ircmsg)
 
 
-    # Response server message, keep bot alive
+    # Response server message
     def _resp(self, type_, ircmsg):
         if type_ == IRCMsgType.PING:
             self.pong()
@@ -200,20 +179,29 @@ class IRC(object):
             pass
         elif type_ == IRCMsgType.MSG:
             if ircmsg.cmd == RPL_WELCOME:
-                self.nick = ircmsg.args[0]
-                if self.after_login:
-                    self.after_login()
+                self._on_login(ircmsg.args[0])
             elif ircmsg.cmd == ERR_NICKNAMEINUSE:
                 new_nick = ircmsg.args[1] + '_'
                 logger.info('Nick already in use, use "%s"', new_nick)
-                self.chnick(new_nick)
+                self._chnick(new_nick)
             elif ircmsg.cmd == 'JOIN' and ircmsg.nick == self.nick:
+                logger.info('%s has joined %s', self.nick, ircmsg.args[0])
                 self.chans.append(ircmsg.args[0])
             elif ircmsg.cmd == 'PART' and ircmsg.nick == self.nick:
+                logger.info('%s has left %s', self.nick, ircmsg.args[0])
                 self.chans.remove(ircmsg.args[0])
 
 
-    def recv(self, msg):
+    def _keep_alive(self):
+        # Ping time out
+        if time.time() - self._last_pong > 360:
+            logger.error('Ping time out')
+
+            self._reconnect()
+            self._last_pong = time.time()
+
+
+    def _recv(self, msg):
         if msg:
             type_, ircmsg = self._parse(msg)
             self._resp(type_, ircmsg)
@@ -221,6 +209,62 @@ class IRC(object):
                 self.on_recv(type_, ircmsg)
 
         self._sock_recv()
+
+
+    def _chnick(self, nick):
+        self._sock_send('NICK %s\r\n' % nick)
+
+
+    def _on_login(self, nick):
+        logger.info('You are logined as %s', nick)
+
+        self.nick = nick
+
+        if self.after_login:
+            self.after_login()
+
+        chans = self.chans
+        self.chans = []
+        [self.join(chan) for chan in chans]
+
+
+    def _login(self):
+        logger.info('Try to login as "%s"', self.nick)
+
+        self._chnick(self.nick)
+        self._sock_send('USER %s %s %s %s\r\n' % (self.nick, 'labots',
+            'localhost', 'lastavengers#outlook.com'))
+
+        self._sock_recv()
+
+
+    def _pong(self):
+        logger.debug('Pong!')
+
+        self._last_pong = time.time()
+        self._sock_send('PONG :labots!\n')
+
+
+    def join(self, chan):
+        logger.debug('Try to join %s', chan)
+        self._sock_send('JOIN %s\r\n' % chan)
+
+
+    def part(self, chan):
+        logger.debug('Try to part %s', chan)
+        self._sock_send('PART %s\r\n' % chan)
+
+
+    def send(self, target, msg):
+        self._sock_send('PRIVMSG %s :%s\r\n' % (target, msg))
+
+
+    def action(self, target, msg):
+        self._sock_send('PRIVMSG %s :\1ACTION %s\1\r\n')
+
+
+    def topic(self, chan, topic):
+        self._sock_send('TOPIC %s :%s\r\n' % (chan, topic))
 
 
     def quit(self, reason = '食饭'):
@@ -232,3 +276,11 @@ class IRC(object):
         logger.info('Stop')
         self.quit()
         self._stream.close()
+
+if __name__ == '__main__':
+    irc = IRC('irc.freenode.net', 6667, 'labots')
+    try:
+        IOLoop.instance().start()
+    except KeyboardInterrupt:
+        irc.stop()
+        IOLoop.instance().stop()

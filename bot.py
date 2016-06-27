@@ -5,15 +5,6 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-hdr = logging.StreamHandler()
-hdr.setLevel(logging.INFO)
-
-fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
-fmter = logging.Formatter(fmt, None)
-
-hdr.setFormatter(fmt)
-logger.addHandler(hdr)
-
 
 # IRC bot prototype
 class Bot(object):
@@ -64,3 +55,6 @@ def broadcast(func):
                         func.__name__, self._name)
         return pass_
     return warpper
+
+if __name__ == '__main__':
+    logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')

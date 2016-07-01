@@ -1,5 +1,5 @@
 # -*- encoding: UTF-8 -*-
-# RFC 2812 Incomplete Implement
+# RFC 2812 Incompleted Implement
 
 import re
 import time
@@ -10,7 +10,6 @@ from ircmagic import *
 from enum import Enum
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.iostream import IOStream
-from threading import Timer
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -248,6 +247,15 @@ class IRC(object):
 
     def send(self, target, msg):
         self._sock_send('PRIVMSG %s :%s\r\n' % (target, msg))
+
+        # You will recv the message you sent
+        ircmsg = IRCMsg()
+        ircmsg.nick = self.nick
+        ircmsg.cmd = 'PRIVMSG'
+        ircmsg.args = [target]
+        ircmsg.msg = msg
+        if self.on_recv:
+            self.on_recv(IRCMsgType.MSG, ircmsg)
 
 
     def action(self, target, msg):

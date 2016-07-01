@@ -5,32 +5,13 @@ import logging
 import pyinotify
 import importlib
 import functools
-from bot import Bot, echo, broadcast
 from tornado.ioloop import IOLoop
+from bot import Bot, echo, broadcast, check_bot
+from irc import IRC, IRCMsg, IRCMsgType
 
 # Initialize logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
-def check_bot(bot):
-    if not isinstance(bot.targets, list):
-        logger.error('bot.target is no correctly defined')
-        return False
-    if not isinstance(bot.trig_cmds, list):
-        logger.error('bot.trig_cmds is no correctly defined')
-        return False
-    if not isinstance(bot.trig_keys, list):
-        logger.error('bot.trig_keys is no correctly defined')
-        return False
-    if not hasattr(bot.init, '__call__'):
-        logger.error('bot.init() is no correctly defined')
-        return False
-    if not hasattr(bot.finalize, '__call__'):
-        logger.error('bot.init() is no correctly defined')
-        return False
-
-    return True
 
 
 class EventHandler(pyinotify.ProcessEvent):
@@ -188,6 +169,59 @@ class BotBox(object):
         self.send_handler = send
         self.join_handler = join
         self.part_handler = part
+
+
+    def dispatch(self, type_, ircmsg):
+        if type_ != IRCMsgType.MSG:
+            return
+
+        if ircmsg.cmd[0] in ['4', '5']:
+            logger.error('Error message: %s', ircmsg.msg)
+        elif ircmsg.cmd == 'JOIN':
+            chan = ircmsg.args[0]
+            for bot in self.bots:
+                if ircmsg.cmd in bot.trig_cmds and chan in bot.targets:
+                    try:
+                        if not bot.on_join(ircmsg.nick, chan):
+                            break
+                    except Exception as err:
+                        logger.error('"%s".on_join() failed: %s', bot._name, err)
+        elif ircmsg.cmd == 'PART':
+            chan, reason = ircmsg.args[0], ircmsg.msg
+            for bot in self.bots:
+                if ircmsg.cmd in bot.trig_cmds and chan in bot.targets:
+                    try:
+                        if not bot.on_part(ircmsg.nick, chan, reason):
+                            break
+                    except Exception as err:
+                        logger.error('"%s".on_part() failed: %s',bot._name, err)
+        elif ircmsg.cmd == 'QUIT':
+            reason = ircmsg.msg
+            for bot in self.bots:
+                if ircmsg.cmd in bot.trig_cmds:
+                    try:
+                        if not bot.on_quit(ircmsg.nick, reason):
+                            break
+                    except Exception as err:
+                        logger.error('"%s".on_quit() failed: %s', bot._name, err)
+        elif ircmsg.cmd == 'NICK':
+            new_nick = ircmsg.msg
+            for bot in self.bots:
+                if ircmsg.cmd in bot.trig_cmds:
+                    try:
+                        if not bot.on_nick(ircmsg.nick, new_nick):
+                            break
+                    except Exception as err:
+                        logger.error('"%s".on_nick() failed: %s', bot._name, err)
+        elif ircmsg.cmd == 'PRIVMSG':
+            chan = ircmsg.args[0]
+            for bot in self.bots:
+                if ircmsg.cmd in bot.trig_cmds and chan in bot.targets:
+                    try:
+                        if not bot.on_privmsg(ircmsg.nick, chan, ircmsg.msg):
+                            break
+                    except Exception as err:
+                        logger.error('"%s".on_privmsg() failed: %s', bot._name, err)
 
 
     def stop(self):

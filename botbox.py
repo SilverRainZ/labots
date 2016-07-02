@@ -5,7 +5,7 @@ import logging
 import pyinotify
 import importlib
 import functools
-from tornado.ioloop import IOLoop
+from tornado.ioloop import IOLoop, PeriodicCallback
 from bot import Bot, echo, broadcast, check_bot
 from irc import IRC, IRCMsg, IRCMsgType
 
@@ -49,10 +49,13 @@ class EventHandler(pyinotify.ProcessEvent):
 class BotBox(object):
     _ioloop = None
     _notifier = None
+    _timer = None
+    _tick = 0
 
     path = None
     bots = []
     chans = {}
+
     send_handler = None
     join_handler = None
     part_handler = None
@@ -63,6 +66,13 @@ class BotBox(object):
         self.path = path
         sys.path.append(path)
         self._ioloop = ioloop or IOLoop.instance()
+
+
+        # 1 min
+        self._tick = 0
+        self._timer = PeriodicCallback(self._on_timer,
+                10 * 1000, io_loop=self._ioloop)
+        self._timer.start()
         
 
     def _get(self, filename):
@@ -148,6 +158,18 @@ class BotBox(object):
             else:
                 logger.error('Invaild join_handler')
 
+
+    def _on_timer(self):
+        logger.debug('self._tick: %s', self._tick)
+        self._tick += 1
+
+        ircmsg = IRCMsg()
+        ircmsg.cmd = 'TIMER'
+
+        # :( Ugly hack
+        self.dispatch(IRCMsgType.MSG, ircmsg)
+
+
     def start(self):
         for f in os.listdir(self.path):
             if f.endswith('.py') and not f.startswith('_'):
@@ -178,7 +200,7 @@ class BotBox(object):
         if ircmsg.cmd[0] in ['4', '5']:
             logger.error('Error message: %s', ircmsg.msg)
         elif ircmsg.cmd == 'JOIN':
-            chan = ircmsg.args[0]
+            chan = ircmsg.args[0] or ircmsg.msg
             for bot in self.bots:
                 if ircmsg.cmd in bot.trig_cmds and chan in bot.targets:
                     try:
@@ -222,6 +244,15 @@ class BotBox(object):
                             break
                     except Exception as err:
                         logger.error('"%s".on_privmsg() failed: %s', bot._name, err)
+        # Actually, TIMEER is not a IRC message
+        elif ircmsg.cmd == 'TIMER':
+            for bot in self.bots:
+                if ircmsg.cmd in bot.trig_cmds:
+                    try:
+                        if not bot.on_timer():
+                            break
+                    except Exception as err:
+                        logger.error('"%s".on_timer() failed: %s', bot._name, err)
 
 
     def stop(self):

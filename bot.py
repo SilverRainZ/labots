@@ -5,6 +5,15 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# Supported commands
+supp_cmd = [
+        'JOIN',
+        'PART',
+        'PRIVMSG',
+        'NICK',
+        'QUIT',
+        'TIMER',
+        ]
 
 # IRC bot prototype
 class Bot(object):
@@ -16,7 +25,7 @@ class Bot(object):
     # Public for sub class
     targets = []
     trig_cmds = []
-    trig_keys = []
+    cmd_params = {}
 
     def init(self):
         pass
@@ -29,7 +38,11 @@ class Bot(object):
 # Decorator for callback functions in `Bot`
 def echo(func):
     def warpper(self, *args, **kw):
-        pass_, target, msg = func(self, *args, **kw)
+        res = func(self, *args, **kw)
+        if not res:
+            return True
+        pass_, target, msg = res
+
         logger.debug('%s(): pass: %s, target: %s, msg: %s',
                 func.__name__, pass_, target, msg)
         if target and msg:
@@ -45,8 +58,12 @@ def echo(func):
 # Decorator for callback functions in `Bot`
 def broadcast(func):
     def warpper(self, *args, **kw):
-        pass_, targets, msg = func(self, *args, **kw)
-        logger.debug('%s(): pass: %s, msg: %s', func.__name__, pass_, msg)
+        res = func(self, *args, **kw)
+        if not res:
+            return True
+        pass_, targets, msg = res
+
+        logger.debug('%s(): pass: %s, target: %s, msg: %s', func.__name__, pass_, msg)
         if msg:
             if self._send_handler:
                 [self._send_handler(t, msg) for t in targets]
@@ -64,8 +81,8 @@ def check_bot(bot):
     if not isinstance(bot.trig_cmds, list):
         logger.error('bot.trig_cmds is no correctly defined')
         return False
-    if not isinstance(bot.trig_keys, list):
-        logger.error('bot.trig_keys is no correctly defined')
+    if not isinstance(bot.cmd_params, dict):
+        logger.error('bot.cmd_params is no correctly defined')
         return False
     if not hasattr(bot.init, '__call__'):
         logger.error('bot.init() is no correctly defined')
@@ -73,7 +90,10 @@ def check_bot(bot):
     if not hasattr(bot.finalize, '__call__'):
         logger.error('bot.init() is no correctly defined')
         return False
-
+    for cmd in bot.trig_cmds:
+        if cmd not in supp_cmd:
+            logger.error('No supported command "%s"', cmd)
+            return False
     return True
 
 

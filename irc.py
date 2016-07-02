@@ -127,10 +127,10 @@ class IRC(object):
 
             # <params> ::= <SPACE> [ ':' <trailing> | <middle> <params> ]
             middle, _, trailing = params.partition(' :')
-            logger.debug('middle: "%s", trailing: "%s"', middle, trailing)
             if middle.startswith(':'):
                 trailing = middle[1:]
                 middle = ''
+            logger.debug('middle: "%s", trailing: "%s"', middle, trailing)
 
             if not middle and not trailing:
                 raise Exception('No <middle> and <trailing>')
@@ -175,8 +175,9 @@ class IRC(object):
                 logger.info('Nick already in use, use "%s"', new_nick)
                 self._chnick(new_nick)
             elif ircmsg.cmd == 'JOIN' and ircmsg.nick == self.nick:
-                logger.info('%s has joined %s', self.nick, ircmsg.args[0])
-                self.chans.append(ircmsg.args[0])
+                chan = ircmsg.args[0] or ircmsg.msg
+                logger.info('%s has joined %s', self.nick, chan)
+                self.chans.append(chan)
             elif ircmsg.cmd == 'PART' and ircmsg.nick == self.nick:
                 logger.info('%s has left %s', self.nick, ircmsg.args[0])
                 self.chans.remove(ircmsg.args[0])

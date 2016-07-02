@@ -2,7 +2,7 @@ from bot import Bot, echo, broadcast
 
 class ExampleBot(Bot):
     targets = ['#lasttest', '#nexttest']
-    trig_cmds = ['JOIN', 'PART', 'QUIT', 'NICK', 'PRIVMSG']
+    trig_cmds = ['JOIN', 'PART', 'QUIT', 'NICK', 'PRIVMSG', 'TIMER']
 
     def init(self):
         pass
@@ -28,7 +28,14 @@ class ExampleBot(Bot):
 
     @echo
     def on_privmsg(self, nick, target, msg):
-        return (True, target, '%s: %s' % (nick, msg))
+        # NOTE: if you return message in any case,
+        # endless loop will be caused
+        if msg.startswith('\'echo '):
+            return (True, target, '%s: %s' % (nick, msg[5:]))
+
+    @broadcast
+    def on_timer(self):
+        return (True, self.targets, '1 minute passed')
 
 
 bot = ExampleBot()

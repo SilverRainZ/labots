@@ -3,6 +3,7 @@ LABOTS
 
 IRC bot framework written in python 3.x, just works for myself.
 
+
 Features
 --------
 
@@ -22,7 +23,12 @@ Requires
 
 Usage
 -----
-TODO, plz see `bot/example.py` firstly.
+Please see `bot/example.py`.
+
+
+Bots
+----
+See <https://github.com/LastAvenger/bots>.
 
 
 References

@@ -224,6 +224,9 @@ class IRC(object):
 
 
     def _dispatch(self, type_, ircmsg):
+        if type_ != IRCMsgType.MSG:
+             return
+
         self.raw_callback(ircmsg)
 
         # Error message

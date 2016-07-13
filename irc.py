@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+def empty_callback(*args, **kw):
+    logger.debug("Unimplement callback %s %s" % (args, kw))
+
+
 class IRCMsgType(Enum):
     PING = 0
     NOTICE = 1
@@ -32,10 +36,8 @@ class IRCMsg(object):
 
     # Command
     cmd = ''
-
     # Middle
     args = []
-
     # Trailing
     msg = ''
 
@@ -48,29 +50,39 @@ class IRC(object):
     _timer = None
     _last_pong = None
 
-    # Public
     host = None
     port = None
     nick = None
     chans = []
-    after_login = None
-    on_recv = None
+    chans_ref = {}
+    names = {}
 
-    def __init__(self, host, port, nick,
-            after_login = None, on_recv = None,
-            charset = 'utf-8', ioloop = False):
+    # External callbacks
+    # def raw_callback(IRCMsg)
+    raw_callback = None
+    # def login_callback()
+    login_callback = None
+    # def privmsg_callback(nick, chan, msg)
+    privmsg_callback = None
+    # def join_callback(nick, chan)
+    join_callback = None
+    # def part_callback(nick, chan, reason)
+    part_callback = None
+    # def quit_callback(nick, chan, reason)
+    quit_callback = None
+    # def nick_callback(old_nick, new_nick)
+    nick_callback = None
+
+    def __init__(self, host, port, nick, charset = 'utf-8', ioloop = False):
 
         logger.info('Connecting to %s:%s', host, port)
 
         self.host = host
         self.port = port
         self.nick = nick
-        self.after_login = after_login
-        self.on_recv = on_recv
 
         self._charset = charset
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # sock.settimeout(20)
         self._ioloop = ioloop or IOLoop.instance()
         self._stream = IOStream(sock, io_loop = self._ioloop)
         self._stream.connect((host, port), self._login)
@@ -79,6 +91,7 @@ class IRC(object):
         self._timer = PeriodicCallback(self._keep_alive,
                 60 * 1000, io_loop=self._ioloop)
         self._timer.start()
+
 
     def _sock_send(self, data):
         return self._stream.write(bytes(data, self._charset))
@@ -174,13 +187,67 @@ class IRC(object):
                 new_nick = ircmsg.args[1] + '_'
                 logger.info('Nick already in use, use "%s"', new_nick)
                 self._chnick(new_nick)
-            elif ircmsg.cmd == 'JOIN' and ircmsg.nick == self.nick:
+            elif ircmsg.cmd == 'JOIN':
                 chan = ircmsg.args[0] or ircmsg.msg
-                logger.info('%s has joined %s', self.nick, chan)
-                self.chans.append(chan)
-            elif ircmsg.cmd == 'PART' and ircmsg.nick == self.nick:
-                logger.info('%s has left %s', self.nick, ircmsg.args[0])
-                self.chans.remove(ircmsg.args[0])
+                if ircmsg.nick == self.nick:
+                    self.chans.append(chan)
+                    self.names[chan] = set()
+                    logger.info('%s has joined %s', self.nick, chan)
+                self.names[chan].add(self.nick)
+            elif ircmsg.cmd == 'PART':
+                chan = ircmsg.args[0]
+                self.names[chan].remove(self.nick)
+                if ircmsg.nick == self.nick:
+                    self.chans.remove(chan)
+                    self.names[chan].clear()
+                    logger.info('%s has left %s', self.nick, ircmsg.args[0])
+            elif ircmsg.cmd == 'NICK':
+                new_nick, old_nick = ircmsg.msg, ircmsg.nick
+                for chan in self.chans:
+                    if old_nick in self.names[chan]:
+                        self.names[chan].remove(old_nick)
+                        self.names[chan].add(new_nick)
+                if old_nick == self.nick:
+                    self.nick = old_nick
+                    logger.info('%s is now known as %s', old_nick, new_nick)
+            elif ircmsg.cmd == 'QUIT':
+                nick = ircmsg.nick
+                for chan in self.chans:
+                    if nick in self.names[chan]:
+                        self.names[chan].remove(nick)
+            elif ircmsg.cmd == RPL_NAMREPLY:
+                chan = ircmsg.args[2]
+                names_list = [x[1:] if x[0] in ['@', '+'] else x
+                        for x in ircmsg.msg.split(' ')]
+                self.names[chan].update(names_list)
+                logger.debug('NAMES: %s' % names_list)
+
+
+    def _dispatch(self, type_, ircmsg):
+        self.raw_callback(ircmsg)
+
+        # Error message
+        if ircmsg.cmd[0] in ['4', '5']:
+            logger.error('Error message: %s', ircmsg.msg)
+        elif ircmsg.cmd == 'JOIN':
+            nick, chan = ircmsg.nick, ircmsg.args[0] or ircmsg.msg
+            self.join_callback(nick, chan)
+        elif ircmsg.cmd == 'PART':
+            nick, chan, reason = ircmsg.nick, ircmsg.args[0], ircmsg.msg
+            self.part_callback(nick, chan, reason)
+        elif ircmsg.cmd == 'QUIT':
+            nick, reason = ircmsg.nick, ircmsg.msg
+            for chan in self.chans:
+                if nick in self.names[chan]:
+                    self.quit_callback(nick, chan, reason)
+        elif ircmsg.cmd == 'NICK':
+            new_nick, old_nick = ircmsg.msg, ircmsg.nick
+            for chan in self.chans:
+                if old_nick in self.names[chan]:
+                    self.nick_callback(old_nick, new_nick, chan)
+        elif ircmsg.cmd == 'PRIVMSG':
+            nick, target, msg = ircmsg.nick, ircmsg.args[0], ircmsg.msg
+            self.privmsg_callback(nick, target, msg)
 
 
     def _keep_alive(self):
@@ -195,9 +262,8 @@ class IRC(object):
     def _recv(self, msg):
         if msg:
             type_, ircmsg = self._parse(msg)
+            self._dispatch(type_, ircmsg)
             self._resp(type_, ircmsg)
-            if self.on_recv:
-                self.on_recv(type_, ircmsg)
 
         self._sock_recv()
 
@@ -210,13 +276,13 @@ class IRC(object):
         logger.info('You are logined as %s', nick)
 
         self.nick = nick
-
-        if self.after_login:
-            self.after_login()
-
         chans = self.chans
+
+        self.login_callback()
+
         self.chans = []
         [self.join(chan) for chan in chans]
+
 
 
     def _login(self):
@@ -236,12 +302,50 @@ class IRC(object):
         self._sock_send('PONG :labots!\n')
 
 
+    def set_callback(self,
+            raw = empty_callback,
+            login = empty_callback,
+            privmsg = empty_callback,
+            join = empty_callback,
+            part = empty_callback,
+            quit = empty_callback,
+            nick = empty_callback):
+
+        self.raw_callback = raw
+        self.login_callback = login
+        self.privmsg_callback = privmsg
+        self.join_callback = join
+        self.part_callback = part
+        self.quit_callback = quit
+        self.nick_callback = nick
+
+
     def join(self, chan):
+        if chan[0] not in ['#', '&']:
+            return
+
+        if chan in self.chans_ref:
+            self.chans_ref[chan] += 1
+            return
+
+        self.chans_ref[chan] = 1
+
         logger.debug('Try to join %s', chan)
         self._sock_send('JOIN %s\r\n' % chan)
 
 
     def part(self, chan):
+        if chan[0] not in ['#', '&']:
+            return
+        if chan not in self.chans_ref:
+            return
+
+        if self.chans_ref[chan] != 1:
+            self.chans_ref[chan] -= 1
+            return
+
+        self.chans_ref.pop(chan, None)
+
         logger.debug('Try to part %s', chan)
         self._sock_send('PART %s\r\n' % chan)
 
@@ -250,13 +354,7 @@ class IRC(object):
         self._sock_send('PRIVMSG %s :%s\r\n' % (target, msg))
 
         # You will recv the message you sent
-        ircmsg = IRCMsg()
-        ircmsg.nick = self.nick
-        ircmsg.cmd = 'PRIVMSG'
-        ircmsg.args = [target]
-        ircmsg.msg = msg
-        if self.on_recv:
-            self.on_recv(IRCMsgType.MSG, ircmsg)
+        self.privmsg_callback(self.nick, target, msg)
 
 
     def action(self, target, msg):
@@ -280,6 +378,7 @@ class IRC(object):
 if __name__ == '__main__':
     logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
     irc = IRC('irc.freenode.net', 6667, 'labots')
+    irc.set_callback()
     try:
         IOLoop.instance().start()
     except KeyboardInterrupt:

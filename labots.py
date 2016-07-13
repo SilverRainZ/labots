@@ -16,11 +16,22 @@ logger.setLevel(logging.INFO)
 def main():
     botbox = BotBox(config.path)
 
-    irc = IRC(config.host, config.port, 'labots',
-            after_login = botbox.start,
-            on_recv = botbox.dispatch)
+    irc = IRC(config.host, config.port, 'labots')
 
-    botbox.set_handler(irc.send, irc.join, irc.part)
+    irc.set_callback(
+            login = botbox.start,
+            privmsg = botbox.on_privmsg,
+            join = botbox.on_join,
+            part = botbox.on_part,
+            nick = botbox.on_nick,
+            quit = botbox.on_quit,
+            )
+
+    botbox.set_handler(
+            send = irc.send,
+            join = irc.join,
+            part = irc.part
+            )
 
     try:
         IOLoop.instance().start()

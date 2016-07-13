@@ -18,13 +18,13 @@ class ExampleBot(Bot):
     def on_part(self, nick, chan, reason):
         return (True, chan, '%s |<-- %s: %s' % (nick, chan, reason))
 
-    @broadcast
-    def on_quit(self, nick, reason):
-        return (True, self.targets, '%s |<-- : %s' % (nick, reason))
+    @echo
+    def on_quit(self, nick, chan, reason):
+        return (True, chan, '%s |<-- : %s' % (nick, reason))
 
-    @broadcast
-    def on_nick(self, nick, new_nick):
-        return (True, self.targets, '%s -> %s' % (nick, new_nick))
+    @echo
+    def on_nick(self, nick, new_nick, chan):
+        return (True, chan, '%s -> %s' % (nick, new_nick))
 
     @echo
     def on_privmsg(self, nick, target, msg):

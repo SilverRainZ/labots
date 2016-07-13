@@ -7,11 +7,15 @@ import importlib
 import functools
 from tornado.ioloop import IOLoop, PeriodicCallback
 from bot import Bot, echo, broadcast, check_bot
-from irc import IRC, IRCMsg, IRCMsgType
+from irc import IRCMsg, IRCMsgType
 
 # Initialize logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def empty_handler(*args, **kw):
+    logger.debug("Unimplement handler %s %s" % (args, kw))
 
 
 class EventHandler(pyinotify.ProcessEvent):
@@ -54,7 +58,6 @@ class BotBox(object):
 
     path = None
     bots = []
-    chans = {}
 
     send_handler = None
     join_handler = None
@@ -67,11 +70,10 @@ class BotBox(object):
         sys.path.append(path)
         self._ioloop = ioloop or IOLoop.instance()
 
-
         # 1 min
         self._tick = 0
-        self._timer = PeriodicCallback(self._on_timer,
-                10 * 1000, io_loop=self._ioloop)
+        self._timer = PeriodicCallback(self.on_timer,
+                60 * 1000, io_loop=self._ioloop)
         self._timer.start()
         
 
@@ -106,7 +108,7 @@ class BotBox(object):
                     self.bots.append(mod.bot)
                     mod.bot._send_handler = self.send_handler
                     for t in mod.bot.targets:
-                        self._join(t)
+                        self.join_handler(t)
                     logger.info('Bot "%s" is loaded', modname)
                     return True
         except Exception as err:
@@ -126,48 +128,17 @@ class BotBox(object):
 
         self.bots.remove(bot)
         for t in bot.targets:
-            self._part(t)
+            self.part_handler(t)
         logger.info('Bot "%s" is unloaded', bot._name)
         return True
 
-    def _join(self, chan):
-        if chan[0] not in ['#', '&']:
-            return
 
-        if chan in self.chans:
-            self.chans[chan] += 1
-        else:
-            self.chans[chan] = 1
-            if self.join_handler:
-                self.join_handler(chan)
-            else:
-                logger.error('Invaild join_handler')
-
-    def _part(self, chan):
-        if chan[0] not in ['#', '&']:
-            return
-        if chan not in self.chans:
-            return
-
-        if self.chans[chan] != 1:
-            self.chans[chan] -= 1
-        else:
-            self.chans.pop(chan, None)
-            if self.part_handler:
-                self.part_handler(chan)
-            else:
-                logger.error('Invaild join_handler')
-
-
-    def _on_timer(self):
-        logger.debug('self._tick: %s', self._tick)
-        self._tick += 1
-
-        ircmsg = IRCMsg()
-        ircmsg.cmd = 'TIMER'
-
-        # :( Ugly hack
-        self.dispatch(IRCMsgType.MSG, ircmsg)
+    def set_handler(self, send = empty_handler,
+            join = empty_handler,
+            part = empty_handler):
+        self.send_handler = send
+        self.join_handler = join
+        self.part_handler = part
 
 
     def start(self):
@@ -187,72 +158,68 @@ class BotBox(object):
                 wm, self._ioloop, default_proc_fun = handle)
 
 
-    def set_handler(self, send, join, part):
-        self.send_handler = send
-        self.join_handler = join
-        self.part_handler = part
+    # TODO: 减少重复代码
+    def on_privmsg(self, nick, chan, msg):
+        for bot in self.bots:
+            if 'PRIVMSG' in bot.trig_cmds and chan in bot.targets:
+                try:
+                    if not bot.on_privmsg(nick, chan, msg):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_privmsg() failed: %s', bot._name, err)
 
 
-    def dispatch(self, type_, ircmsg):
-        if type_ != IRCMsgType.MSG:
-            return
+    def on_join(self, nick, chan):
+        for bot in self.bots:
+            if 'JOIN' in bot.trig_cmds and chan in bot.targets:
+                try:
+                    if not bot.on_join(nick, chan):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_join() failed: %s', bot._name, err)
 
-        if ircmsg.cmd[0] in ['4', '5']:
-            logger.error('Error message: %s', ircmsg.msg)
-        elif ircmsg.cmd == 'JOIN':
-            chan = ircmsg.args[0] or ircmsg.msg
-            for bot in self.bots:
-                if ircmsg.cmd in bot.trig_cmds and chan in bot.targets:
-                    try:
-                        if not bot.on_join(ircmsg.nick, chan):
-                            break
-                    except Exception as err:
-                        logger.error('"%s".on_join() failed: %s', bot._name, err)
-        elif ircmsg.cmd == 'PART':
-            chan, reason = ircmsg.args[0], ircmsg.msg
-            for bot in self.bots:
-                if ircmsg.cmd in bot.trig_cmds and chan in bot.targets:
-                    try:
-                        if not bot.on_part(ircmsg.nick, chan, reason):
-                            break
-                    except Exception as err:
+
+    def on_part(self, nick, chan, reason):
+        for bot in self.bots:
+            if 'PART' in bot.trig_cmds and chan in bot.targets:
+                try:
+                    if not bot.on_part(nick, chan, reason):
+                        break
+                except Exception as err:
                         logger.error('"%s".on_part() failed: %s',bot._name, err)
-        elif ircmsg.cmd == 'QUIT':
-            reason = ircmsg.msg
-            for bot in self.bots:
-                if ircmsg.cmd in bot.trig_cmds:
-                    try:
-                        if not bot.on_quit(ircmsg.nick, reason):
-                            break
-                    except Exception as err:
-                        logger.error('"%s".on_quit() failed: %s', bot._name, err)
-        elif ircmsg.cmd == 'NICK':
-            new_nick = ircmsg.msg
-            for bot in self.bots:
-                if ircmsg.cmd in bot.trig_cmds:
-                    try:
-                        if not bot.on_nick(ircmsg.nick, new_nick):
-                            break
-                    except Exception as err:
-                        logger.error('"%s".on_nick() failed: %s', bot._name, err)
-        elif ircmsg.cmd == 'PRIVMSG':
-            chan = ircmsg.args[0]
-            for bot in self.bots:
-                if ircmsg.cmd in bot.trig_cmds and chan in bot.targets:
-                    try:
-                        if not bot.on_privmsg(ircmsg.nick, chan, ircmsg.msg):
-                            break
-                    except Exception as err:
-                        logger.error('"%s".on_privmsg() failed: %s', bot._name, err)
-        # Actually, TIMEER is not a IRC message
-        elif ircmsg.cmd == 'TIMER':
-            for bot in self.bots:
-                if ircmsg.cmd in bot.trig_cmds:
-                    try:
-                        if not bot.on_timer():
-                            break
-                    except Exception as err:
-                        logger.error('"%s".on_timer() failed: %s', bot._name, err)
+
+
+    def on_quit(self, nick, chan, reason):
+        for bot in self.bots:
+            if 'QUIT' in bot.trig_cmds and chan in bot.targets:
+                try:
+                    if not bot.on_quit(nick, chan, reason):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_quit() failed: %s', bot._name, err)
+
+
+    def on_nick(self, old_nick, new_nick, chan):
+        for bot in self.bots:
+            if 'NICK' in bot.trig_cmds and chan in bot.targets:
+                try:
+                    if not bot.on_nick(old_nick, new_nick, chan):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_nick() failed: %s', bot._name, err)
+
+
+    def on_timer(self):
+        logger.debug('self._tick: %s', self._tick)
+        self._tick += 1
+
+        for bot in self.bots:
+            if 'TIMER' in bot.trig_cmds:
+                try:
+                    if not bot.on_timer():
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_timer() failed: %s', bot._name, err)
 
 
     def stop(self):
@@ -265,7 +232,7 @@ class BotBox(object):
 if __name__ == '__main__':
     logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
     box = BotBox('bots')
-    box.set_handler(None, None, None)
+    box.set_handler()
     box.start()
     try:
         IOLoop.instance().start()

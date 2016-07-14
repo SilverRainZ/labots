@@ -19,12 +19,12 @@ def main():
     irc = IRC(config.host, config.port, 'labots')
 
     irc.set_callback(
-            login = botbox.start,
-            privmsg = botbox.on_privmsg,
-            join = botbox.on_join,
-            part = botbox.on_part,
-            nick = botbox.on_nick,
-            quit = botbox.on_quit,
+            on_login = botbox.start,
+            on_privmsg = botbox.on_privmsg,
+            on_join = botbox.on_join,
+            on_part = botbox.on_part,
+            on_nick = botbox.on_nick,
+            on_quit = botbox.on_quit,
             )
 
     botbox.set_handler(

@@ -284,7 +284,7 @@ class IRC(object):
         self.login_callback()
 
         self.chans = []
-        [self.join(chan) for chan in chans]
+        [self.join(chan, force = True) for chan in chans]
 
 
 
@@ -306,32 +306,31 @@ class IRC(object):
 
 
     def set_callback(self,
-            raw = empty_callback,
-            login = empty_callback,
-            privmsg = empty_callback,
-            join = empty_callback,
-            part = empty_callback,
-            quit = empty_callback,
-            nick = empty_callback):
+            on_raw = empty_callback,
+            on_login = empty_callback,
+            on_privmsg = empty_callback,
+            on_join = empty_callback,
+            on_part = empty_callback,
+            on_quit = empty_callback,
+            on_nick = empty_callback):
+        self.raw_callback = on_raw
+        self.login_callback = on_login
+        self.privmsg_callback = on_privmsg
+        self.join_callback = on_join
+        self.part_callback = on_part
+        self.quit_callback = on_quit
+        self.nick_callback = on_nick
 
-        self.raw_callback = raw
-        self.login_callback = login
-        self.privmsg_callback = privmsg
-        self.join_callback = join
-        self.part_callback = part
-        self.quit_callback = quit
-        self.nick_callback = nick
 
-
-    def join(self, chan):
+    def join(self, chan, force = False):
         if chan[0] not in ['#', '&']:
             return
 
-        if chan in self.chans_ref:
-            self.chans_ref[chan] += 1
-            return
-
-        self.chans_ref[chan] = 1
+        if not force:
+            if chan in self.chans_ref:
+                self.chans_ref[chan] += 1
+                return
+            self.chans_ref[chan] = 1
 
         logger.debug('Try to join %s', chan)
         self._sock_send('JOIN %s\r\n' % chan)

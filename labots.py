@@ -43,5 +43,7 @@ def main():
         return 0
 
 if __name__ == '__main__':
-    logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
+    logging.basicConfig(
+            handlers=[logging.FileHandler("labots.log"), logging.StreamHandler()],
+            format = '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
     main()

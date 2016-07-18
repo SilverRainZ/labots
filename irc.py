@@ -99,11 +99,15 @@ class IRC(object):
 
     def _sock_recv(self):
         def _recv(data):
-            msg = data.decode(self._charset)
+            msg = data.decode(self._charset, 'ignore')
             msg = msg[:-2]  # strip '\r\n'
             self._recv(msg)
 
-        self._stream.read_until(b'\r\n', _recv)
+        try:
+            self._stream.read_until(b'\r\n', _recv)
+        except Exception as err:
+            logger.error('Read error: %s', err)
+            self._reconnect()
 
 
     def _reconnect(self):
@@ -146,7 +150,8 @@ class IRC(object):
             logger.debug('middle: "%s", trailing: "%s"', middle, trailing)
 
             if not middle and not trailing:
-                raise Exception('No <middle> and <trailing>')
+                middle = trailing = ''
+                # raise Exception('No <middle> and <trailing>')
 
             # <middle> ::= <Any *non-empty* sequence of octets not including SPACE
             #              or NUL or CR or LF, the first of which may not be ':'>
@@ -196,7 +201,12 @@ class IRC(object):
                 self.names[chan].add(self.nick)
             elif ircmsg.cmd == 'PART':
                 chan = ircmsg.args[0]
-                self.names[chan].remove(self.nick)
+                try:
+                    self.names[chan].remove(self.nick)
+                except KeyError as err:
+                    logger.error('KeyError: %s', err)
+                    logger.error('%s %s %s %s %s %s', ircmsg.nick, ircmsg.user,
+                            ircmsg.host, ircmsg.cmd, ircmsg.args, ircmsg.msg)
                 if ircmsg.nick == self.nick:
                     self.chans.remove(chan)
                     self.names[chan].clear()

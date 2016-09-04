@@ -6,7 +6,7 @@ import time
 import socket
 import logging
 import functools
-from ircmagic import *
+from ircnumeric import *
 from enum import Enum
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.iostream import IOStream

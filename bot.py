@@ -19,7 +19,6 @@ supp_cmd = [
 class Bot(object):
     # Private for subclass
     _name = None
-    _filename = None
     _send_handler = None
 
     # Public for sub class

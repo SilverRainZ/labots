@@ -5,6 +5,7 @@ import logging
 import pyinotify
 import importlib
 import functools
+import traceback
 from tornado.ioloop import IOLoop, PeriodicCallback
 from bot import Bot, echo, broadcast, check_bot
 from irc import IRCMsg, IRCMsgType
@@ -18,6 +19,15 @@ def empty_handler(*args, **kw):
     logger.debug("Unimplement handler %s %s" % (args, kw))
 
 
+def file2mod(fname):
+    if not fname.startswith('_') \
+            and not fname.startswith('.') \
+            and (os.path.splitext(fname)[1] in ['', '.py']):
+        return os.path.splitext(fname)[0]
+    else:
+        return None
+
+
 class EventHandler(pyinotify.ProcessEvent):
     botbox = None
 
@@ -26,28 +36,68 @@ class EventHandler(pyinotify.ProcessEvent):
 
 
     def process_IN_CREATE(self, event):
+        name = file2mod(event.name)
+        if not name:
+            return
+
         logger.debug('%s', event)
-        if event.path == self.botbox.path \
-                and event.name.endswith('.py') \
-                and not event.name.startswith('_'):
-            self.botbox._load(event.name)
+
+        if event.path == self.botbox.path:
+            self.botbox._load(name)
+        else:
+            path, dir_name = os.path.split(event.path)
+            while path:
+                if path == self.botbox.path \
+                        and file2mod(dir_name):
+                    self.botbox._unload(dir_name)
+                    self.botbox._load(dir_name)
+                    break
+                else:
+                    path, dir_name = os.path.split(path)
 
 
     def process_IN_DELETE(self, event):
+        name = file2mod(event.name)
+        if not name:
+            return
+
         logger.debug('%s', event)
-        if event.path == self.botbox.path \
-                and event.name.endswith('.py') \
-                and not event.name.startswith('_'):
-            self.botbox._unload(event.name)
+
+        if event.path == self.botbox.path:
+            self.botbox._unload(name)
+        else:
+            path, dir_name = os.path.split(event.path)
+            while path:
+                if path == self.botbox.path \
+                        and file2mod(dir_name):
+                    self.botbox._unload(dir_name)
+                    self.botbox._load(dir_name)
+                    break
+                else:
+                    path, dir_name = os.path.split(path)
 
 
     def process_IN_MODIFY(self, event):
+        name = file2mod(event.name)
+        if not name:
+            return
+
         logger.debug('%s', event)
-        if event.path == self.botbox.path \
-                and event.name.endswith('.py') \
-                and not event.name.startswith('_'):
-            self.botbox._unload(event.name)
-            self.botbox._load(event.name)
+
+        if event.path == self.botbox.path:
+            self.botbox._unload(name)
+            self.botbox._load(name)
+        # Bot is a package
+        else:
+            path, dir_name = os.path.split(event.path)
+            while path:
+                if path == self.botbox.path \
+                        and file2mod(dir_name):
+                    self.botbox._unload(dir_name)
+                    self.botbox._load(dir_name)
+                    break
+                else:
+                    path, dir_name = os.path.split(path)
 
 
 class BotBox(object):
@@ -77,21 +127,21 @@ class BotBox(object):
         self._timer.start()
         
 
-    def _get(self, filename):
+    def _get(self, modname):
         for bot in self.bots:
-            if bot._filename == filename:
+            if bot._name == modname:
                 return bot
         return None
 
 
-    def _load(self, filename):
-        bot = self._get(filename)
+    def _load(self, modname):
+        logger.debug('Load "%s"', modname)
+        bot = self._get(modname)
         if bot:
-            logger.debug('"%s" has been loaded', bot._name)
+            logger.warn('"%s" has been loaded', bot._name)
             return False
 
         try:
-            modname = filename[:-3]
             if modname in sys.modules:
                 mod = importlib.reload(sys.modules[modname])
             else:
@@ -103,7 +153,6 @@ class BotBox(object):
                     logger.error('Bot "%s" is failed to initialize: %s', modname, err)
                     return False
                 else:
-                    mod.bot._filename = filename
                     mod.bot._name = modname
                     self.bots.append(mod.bot)
                     mod.bot._send_handler = self.send_handler
@@ -116,10 +165,11 @@ class BotBox(object):
             return False
 
 
-    def _unload(self, filename):
-        bot = self._get(filename)
+    def _unload(self, modname):
+        logger.debug('Unload "%s"', modname)
+        bot = self._get(modname)
         if not bot:
-            logger.debug('"%s" is not loaded', filename[:-3])
+            logger.warn('"%s" is not loaded', modname)
             return False
         try:
             bot.finalize()
@@ -143,15 +193,17 @@ class BotBox(object):
 
     def start(self):
         for f in os.listdir(self.path):
-            if f.endswith('.py') and not f.startswith('_'):
-                self._load(f)
+            name = file2mod(f)
+            if not name:
+                continue
+            self._load(name)
 
         wm = pyinotify.WatchManager()
         wm.add_watch(self.path,
                 pyinotify.IN_DELETE |
                 pyinotify.IN_CREATE |
                 pyinotify.IN_MODIFY ,
-                rec = False)
+                rec = True)
 
         handle = EventHandler(self)
         self._notifier = pyinotify.TornadoAsyncNotifier(
@@ -224,7 +276,7 @@ class BotBox(object):
 
     def stop(self):
         while self.bots:
-            self._unload(self.bots[0]._filename)
+            self._unload(self.bots[0]._name)
         self._notifier.stop()
 
 

@@ -23,11 +23,13 @@ Requires
 
 Usage
 -----
-Please see `bot/example.py`.
+
+Please see `bots/example.py` or https://github.com/lastavenger/labots
 
 
 Bots
 ----
+
 See <https://github.com/LastAvenger/bots>.
 
 

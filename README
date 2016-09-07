@@ -17,14 +17,27 @@ Requires
 --------
 
 * Python 3
-* Pyinotify 0.9.4
-* Tornado 3.2.2
+* Pyinotify >= 0.9.4
+* Tornado >= 3.2.2
 
 
 Usage
 -----
 
-Please see `bots/example.py` or https://github.com/lastavenger/labots
+Run LABots: change field in `config.py`, and run `./labots.py`.
+
+    e.g:
+        host = 'irc.freenode.net'
+        port = 6666
+        nick = 'labots'
+        path = 'bots'
+
+    LABots will loads all bot scripts in `bots` directory, when script file
+    (*.py) or configure file (*.json) changed, bot script will be reload
+    automatically. file which name starts with `_` or `.` will be ignored.
+
+Write a bot: Please see `bots/example.py`
+    or <https://github.com/lastavenger/bots>
 
 
 Bots

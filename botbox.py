@@ -22,7 +22,7 @@ def empty_handler(*args, **kw):
 def file2mod(fname):
     if not fname.startswith('_') \
             and not fname.startswith('.') \
-            and (os.path.splitext(fname)[1] in ['.json', '.py']):
+            and os.path.splitext(fname)[1] == '.py':
         return os.path.splitext(fname)[0]
     else:
         return None
@@ -57,6 +57,10 @@ class EventHandler(pyinotify.ProcessEvent):
         logger.debug('%s', event)
 
         name = file2mod(event.name)
+
+        # If configure file changed
+        if not name and os.path.splitext(event.name)[1] == '.json':
+            name = os.path.splitext(event.name)[0]
 
         if event.path == self.botbox.path and name:
             self.botbox._unload(name)

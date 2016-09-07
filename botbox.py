@@ -22,7 +22,7 @@ def empty_handler(*args, **kw):
 def file2mod(fname):
     if not fname.startswith('_') \
             and not fname.startswith('.') \
-            and (os.path.splitext(fname)[1] in ['', '.py']):
+            and (os.path.splitext(fname)[1] in ['.json', '.py']):
         return os.path.splitext(fname)[0]
     else:
         return None
@@ -36,68 +36,31 @@ class EventHandler(pyinotify.ProcessEvent):
 
 
     def process_IN_CREATE(self, event):
-        name = file2mod(event.name)
-        if not name:
-            return
-
         logger.debug('%s', event)
 
-        if event.path == self.botbox.path:
+        name = file2mod(event.name)
+
+        if event.path == self.botbox.path and name:
             self.botbox._load(name)
-        else:
-            path, dir_name = os.path.split(event.path)
-            while path:
-                if path == self.botbox.path \
-                        and file2mod(dir_name):
-                    self.botbox._unload(dir_name)
-                    self.botbox._load(dir_name)
-                    break
-                else:
-                    path, dir_name = os.path.split(path)
 
 
     def process_IN_DELETE(self, event):
-        name = file2mod(event.name)
-        if not name:
-            return
-
         logger.debug('%s', event)
 
-        if event.path == self.botbox.path:
+        name = file2mod(event.name)
+
+        if event.path == self.botbox.path and name:
             self.botbox._unload(name)
-        else:
-            path, dir_name = os.path.split(event.path)
-            while path:
-                if path == self.botbox.path \
-                        and file2mod(dir_name):
-                    self.botbox._unload(dir_name)
-                    self.botbox._load(dir_name)
-                    break
-                else:
-                    path, dir_name = os.path.split(path)
 
 
     def process_IN_MODIFY(self, event):
-        name = file2mod(event.name)
-        if not name:
-            return
-
         logger.debug('%s', event)
 
-        if event.path == self.botbox.path:
+        name = file2mod(event.name)
+
+        if event.path == self.botbox.path and name:
             self.botbox._unload(name)
             self.botbox._load(name)
-        # Bot is a package
-        else:
-            path, dir_name = os.path.split(event.path)
-            while path:
-                if path == self.botbox.path \
-                        and file2mod(dir_name):
-                    self.botbox._unload(dir_name)
-                    self.botbox._load(dir_name)
-                    break
-                else:
-                    path, dir_name = os.path.split(path)
 
 
 class BotBox(object):
@@ -135,7 +98,6 @@ class BotBox(object):
 
 
     def _load(self, modname):
-        logger.debug('Load "%s"', modname)
         bot = self._get(modname)
         if bot:
             logger.warn('"%s" has been loaded', bot._name)
@@ -166,7 +128,6 @@ class BotBox(object):
 
 
     def _unload(self, modname):
-        logger.debug('Unload "%s"', modname)
         bot = self._get(modname)
         if not bot:
             logger.warn('"%s" is not loaded', modname)
@@ -203,7 +164,7 @@ class BotBox(object):
                 pyinotify.IN_DELETE |
                 pyinotify.IN_CREATE |
                 pyinotify.IN_MODIFY ,
-                rec = True)
+                rec = False)
 
         handle = EventHandler(self)
         self._notifier = pyinotify.TornadoAsyncNotifier(

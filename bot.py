@@ -1,4 +1,6 @@
 # -*- encoding: UTF-8 -*-
+import os
+import json
 import logging
 
 # Initialize logging
@@ -32,6 +34,21 @@ class Bot(object):
     def finalize(self):
         pass
 
+
+def read_config(file_):
+    config_file = os.path.join(os.path.dirname(file_),
+            os.path.splitext(os.path.basename(file_))[0] + '.json')
+
+    try:
+        with open(config_file, 'r') as f:
+            config = json.loads(f.read())
+            return config
+    except FileNotFoundError as err:
+        logger.error('No such file "%s"', config_file)
+    except Exception as err:
+        logger.error('Failed to read configure file of "%s": %s',
+                file_, err)
+    return None
 
 
 # Decorator for callback functions in `Bot`

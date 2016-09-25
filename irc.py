@@ -49,6 +49,7 @@ class IRC(object):
     _ioloop = None
     _timer = None
     _last_pong = None
+    _is_reconnect = 0
 
     host = None
     port = None
@@ -112,6 +113,8 @@ class IRC(object):
 
     def _reconnect(self):
         logger.info('Reconnecting...')
+
+        self._is_reconnect = 1
 
         self._stream.close()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -291,7 +294,8 @@ class IRC(object):
         self.nick = nick
         chans = self.chans
 
-        self.login_callback()
+        if not self._is_reconnect:
+            self.login_callback()
 
         self.chans = []
         [self.join(chan, force = True) for chan in chans]

@@ -63,11 +63,15 @@ class IRC(object):
     raw_callback = None
     # def login_callback()
     login_callback = None
-    # def privmsg_callback(nick, chan, msg)
+    # def privmsg_callback(nick, target, msg)
     privmsg_callback = None
+    # def action_callback(nick, target, msg)
+    action_callback = None
+    # def notice_callback(nick, target, msg)
+    notice_callback = None
     # def join_callback(nick, chan)
     join_callback = None
-    # def part_callback(nick, chan, reason)
+    # def part_callback(nick, chan)
     part_callback = None
     # def quit_callback(nick, chan, reason)
     quit_callback = None
@@ -249,8 +253,8 @@ class IRC(object):
             nick, chan = ircmsg.nick, ircmsg.args[0] or ircmsg.msg
             self.join_callback(nick, chan)
         elif ircmsg.cmd == 'PART':
-            nick, chan, reason = ircmsg.nick, ircmsg.args[0], ircmsg.msg
-            self.part_callback(nick, chan, reason)
+            nick, chan = ircmsg.nick, ircmsg.args[0]
+            self.part_callback(nick, chan)
         elif ircmsg.cmd == 'QUIT':
             nick, reason = ircmsg.nick, ircmsg.msg
             for chan in self.chans:
@@ -262,8 +266,18 @@ class IRC(object):
                 if old_nick in self.names[chan]:
                     self.nick_callback(old_nick, new_nick, chan)
         elif ircmsg.cmd == 'PRIVMSG':
-            nick, target, msg = ircmsg.nick, ircmsg.args[0], ircmsg.msg
-            self.privmsg_callback(nick, target, msg)
+            if ircmsg.msg.startswith('\x01ACTION '):
+                action_msg = ircmsg.msg[len('\x01ACTION '):-1]
+                logger.error('%s', action_msg)
+                nick, target, msg = ircmsg.nick, ircmsg.args[0], action_msg
+                self.action_callback(nick, target, msg)
+            else:
+                nick, target, msg = ircmsg.nick, ircmsg.args[0], ircmsg.msg
+                self.privmsg_callback(nick, target, msg)
+        elif ircmsg.cmd == 'NOTICE':
+                nick, target, msg = ircmsg.nick, ircmsg.args[0], ircmsg.msg
+                logger.error('%s', msg)
+                self.notice_callback(nick, target, msg)
 
 
     def _keep_alive(self):
@@ -323,6 +337,8 @@ class IRC(object):
             on_raw = empty_callback,
             on_login = empty_callback,
             on_privmsg = empty_callback,
+            on_action = empty_callback,
+            on_notice = empty_callback,
             on_join = empty_callback,
             on_part = empty_callback,
             on_quit = empty_callback,
@@ -330,6 +346,8 @@ class IRC(object):
         self.raw_callback = on_raw
         self.login_callback = on_login
         self.privmsg_callback = on_privmsg
+        self.action_callback = on_action
+        self.notice_callback = on_notice
         self.join_callback = on_join
         self.part_callback = on_part
         self.quit_callback = on_quit
@@ -393,7 +411,7 @@ class IRC(object):
 
 if __name__ == '__main__':
     logging.basicConfig(format = '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
-    irc = IRC('irc.freenode.net', 6667, 'labots')
+    irc = IRC('127.0.0.1', 6667, 'labots')
     irc.set_callback()
     try:
         IOLoop.instance().start()

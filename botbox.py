@@ -176,14 +176,34 @@ class BotBox(object):
 
 
     # TODO: 减少重复代码
-    def on_privmsg(self, nick, chan, msg):
+    def on_privmsg(self, nick, target, msg):
         for bot in self.bots:
-            if 'PRIVMSG' in bot.trig_cmds and chan in bot.targets:
+            if 'PRIVMSG' in bot.trig_cmds and target in bot.targets:
                 try:
-                    if not bot.on_privmsg(nick, chan, msg):
+                    if not bot.on_privmsg(nick, target, msg):
                         break
                 except Exception as err:
                     logger.error('"%s".on_privmsg() failed: %s', bot._name, err)
+
+
+    def on_action(self, nick, target, msg):
+        for bot in self.bots:
+            if 'ACTION' in bot.trig_cmds and target in bot.targets:
+                try:
+                    if not bot.on_action(nick, target, msg):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_action() failed: %s', bot._name, err)
+
+
+    def on_notice(self, nick, target, msg):
+        for bot in self.bots:
+            if 'NOTICE' in bot.trig_cmds and target in bot.targets:
+                try:
+                    if not bot.on_notice(nick, target, msg):
+                        break
+                except Exception as err:
+                    logger.error('"%s".on_notice() failed: %s', bot._name, err)
 
 
     def on_join(self, nick, chan):
@@ -196,11 +216,11 @@ class BotBox(object):
                     logger.error('"%s".on_join() failed: %s', bot._name, err)
 
 
-    def on_part(self, nick, chan, reason):
+    def on_part(self, nick, chan):
         for bot in self.bots:
             if 'PART' in bot.trig_cmds and chan in bot.targets:
                 try:
-                    if not bot.on_part(nick, chan, reason):
+                    if not bot.on_part(nick, chan):
                         break
                 except Exception as err:
                         logger.error('"%s".on_part() failed: %s',bot._name, err)

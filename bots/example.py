@@ -51,7 +51,7 @@ class ExampleBot(Bot):
     Here are all commands support by LABots, `TIMEER` is a timing message
     toggle every 1 min.
     '''
-    trig_cmds = ['JOIN', 'PART', 'QUIT', 'NICK', 'PRIVMSG', 'TIMER']
+    trig_cmds = ['JOIN', 'PART', 'QUIT', 'NICK', 'PRIVMSG', 'ACTION', 'NOTICE', 'TIMER']
 
     def init(self):
         '''
@@ -94,6 +94,14 @@ class ExampleBot(Bot):
         # endless loop will be caused
         if msg.startswith('\'echo '):
             return (True, target, '%s: %s' % (nick, msg[5:]))
+
+    @echo
+    def on_notice(self, nick, target, msg):
+        return (True, target, 'Notice: %s' % msg)
+
+    @echo
+    def on_action(self, nick, target, msg):
+        return (True, target, 'Action: %s' % msg)
 
     @broadcast
     def on_timer(self):

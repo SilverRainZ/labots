@@ -12,6 +12,8 @@ supp_cmd = [
         'JOIN',
         'PART',
         'PRIVMSG',
+        'ACTION',
+        'NOTICE',
         'NICK',
         'QUIT',
         'TIMER',

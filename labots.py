@@ -21,6 +21,8 @@ def main():
     irc.set_callback(
             on_login = botbox.start,
             on_privmsg = botbox.on_privmsg,
+            on_action = botbox.on_action,
+            on_notice = botbox.on_notice,
             on_join = botbox.on_join,
             on_part = botbox.on_part,
             on_nick = botbox.on_nick,

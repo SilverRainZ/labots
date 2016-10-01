@@ -7,28 +7,23 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Supported commands
-supp_cmd = [
-        'JOIN',
-        'PART',
-        'PRIVMSG',
-        'ACTION',
-        'NOTICE',
-        'NICK',
-        'QUIT',
-        'TIMER',
-        ]
-
 # IRC bot prototype
 class Bot(object):
     # Private for subclass
     _name = None
-    _send_handler = None
+    _file = None
 
     # Public for sub class
     targets = []
-    trig_cmds = []
-    cmd_params = {}
+    config = {}
+
+    # IRC handler functions
+    # def say(target, msg)
+    say = None
+
+    def __init__(self, file_):
+        self._file = file_
+        self.read_config()
 
     def init(self):
         pass
@@ -36,82 +31,66 @@ class Bot(object):
     def finalize(self):
         pass
 
+    def read_config(self):
+        config_file = os.path.join(os.path.dirname(self._file),
+                os.path.splitext(os.path.basename(self._file))[0] + '.json')
 
-def read_config(file_):
-    config_file = os.path.join(os.path.dirname(file_),
-            os.path.splitext(os.path.basename(file_))[0] + '.json')
+        try:
+            with open(config_file, 'r') as f:
+                self.config = json.loads(f.read())
+        except FileNotFoundError as err:
+            logger.error('No such file "%s"', config_file)
+        except json.JSONDecodeError as err:
+            logger.error('"%s", json decode error: %s', config_file, err)
+        except Exception as err:
+            logger.error('Failed to read configure file of "%s": %s', self._file, err)
 
-    try:
-        with open(config_file, 'r') as f:
-            config = json.loads(f.read())
-            return config
-    except FileNotFoundError as err:
-        logger.error('No such file "%s"', config_file)
-    except Exception as err:
-        logger.error('Failed to read configure file of "%s": %s',
-                file_, err)
-    return None
+    '''
+    User implemented function, origin of message must be the first argument,
+    if function return True, this event won't pass to next bot:
 
-
-# Decorator for callback functions in `Bot`
-def echo(func):
-    def warpper(self, *args, **kw):
-        res = func(self, *args, **kw)
-        if not res:
-            return True
-        pass_, target, msg = res
-
-        logger.debug('%s(): pass: %s, target: %s, msg: %s',
-                func.__name__, pass_, target, msg)
-        if target and msg:
-            if self._send_handler:
-                self._send_handler(target, msg)
-            else:
-                logger.error('%s(): "%s"._send_handler is invaild',
-                        func.__name__, self._name)
-        return pass_
-    return warpper
+    def on_PRIVMSG(target, nick, msg):
+        pass
+    def on_ACTION(target, nick, msg):
+        pass
+    def on_NOTICE(target, nick, msg):
+        pass
+    def on_JOIN(chan, nick):
+        pass
+    def on_PART(chan, nick):
+        pass
+    def on_QUIT(chan, nick, reason):
+        pass
+    def on_NICK(chan, old_nick, new_nick):
+        pass
+    '''
 
 
-# Decorator for callback functions in `Bot`
-def broadcast(func):
-    def warpper(self, *args, **kw):
-        res = func(self, *args, **kw)
-        if not res:
-            return True
-        pass_, targets, msg = res
 
-        logger.debug('%s(): pass: %s, target: %s, msg: %s', func.__name__, pass_, msg)
-        if msg:
-            if self._send_handler:
-                [self._send_handler(t, msg) for t in targets]
-            else:
-                logger.error('%s(): "%s"._send_handler is invaild',
-                        func.__name__, self._name)
-        return pass_
-    return warpper
-
+events = [ 'PRIVMSG', 'ACTION', 'NOTICE', 'JOIN', 'PART', 'QUIT', 'NICK', ]
 
 def check_bot(bot):
     if not isinstance(bot.targets, list):
-        logger.error('bot.target is no correctly defined')
-        return False
-    if not isinstance(bot.trig_cmds, list):
-        logger.error('bot.trig_cmds is no correctly defined')
-        return False
-    if not isinstance(bot.cmd_params, dict):
-        logger.error('bot.cmd_params is no correctly defined')
+        logger.error('"%s".targets is not correctly defined', bot._name)
         return False
     if not hasattr(bot.init, '__call__'):
-        logger.error('bot.init() is no correctly defined')
+        logger.error('"%s".init() is not correctly defined', bot._name)
         return False
     if not hasattr(bot.finalize, '__call__'):
-        logger.error('bot.init() is no correctly defined')
+        logger.error('"%s".init() is not correctly defined', bot._name)
         return False
-    for cmd in bot.trig_cmds:
-        if cmd not in supp_cmd:
-            logger.error('No supported command "%s"', cmd)
-            return False
+
+    func_names = []
+    for event in events:
+        func_name = 'on_' + event
+        if hasattr(bot, func_name):
+            attr = getattr(bot, func_name)
+            if hasattr(attr, '__call__'):
+                func_names.append(func_name)
+            else:
+                logger.error('"%s".%s() is not callable', bot._name, func_name)
+
+    logger.info('Bot "%s" provides: %s', bot._name, func_names)
     return True
 
 

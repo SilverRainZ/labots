@@ -7,10 +7,11 @@ IRC bot framework written in python 3.x, just works for myself.
 Features
 --------
 
-* Run multiple bots with single IRC bot
-* Useful IRC bot interface
-* Dynamic {load,unload} bots (Pyinotify)
-* Asynchronous socket and IO (Tornado)
+* Run multiple bots with single IRC instance
+* Bots do not affect each other
+* Useful and flexible IRC bot interface
+* Dynamic {load,unload} bots when they are modified
+* Asynchronous socket
 
 
 Requires
@@ -24,20 +25,20 @@ Requires
 Usage
 -----
 
-Run LABots: change field in `config.py`, and run `./labots.py`.
+Run LABots: Change fields in `config.py`, and run `./labots.py`.
 
+    config.py
     e.g:
-        host = 'irc.freenode.net'
-        port = 6666
-        nick = 'labots'
-        path = 'bots'
+        host = 'irc.freenode.net'   # IRC server
+        port = 6666                 # Port
+        nick = 'labots'             # IRC bot nick name
+        path = 'bots'               # Path of bot scripts
 
     LABots will loads all bot scripts in `bots` directory, when script file
     (*.py) or configure file (*.json) changed, bot script will be reload
     automatically. file which name starts with `_` or `.` will be ignored.
 
-Write a bot: Please see `bots/example.py`
-    or <https://github.com/lastavenger/bots>
+Write a bot: See `bots/example.py` or <https://github.com/lastavenger/bots>
 
 
 Bots

@@ -4,11 +4,8 @@ import sys
 import logging
 import pyinotify
 import importlib
-import functools
-import traceback
 from tornado.ioloop import IOLoop, PeriodicCallback
-from bot import Bot, echo, broadcast, check_bot
-from irc import IRCMsg, IRCMsgType
+from bot import Bot, check_bot
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -59,7 +56,8 @@ class EventHandler(pyinotify.ProcessEvent):
         name = file2mod(event.name)
 
         # If configure file changed
-        if not name and os.path.splitext(event.name)[1] == '.json':
+        if not name and not event.name.startswith('_') \
+                and os.path.splitext(event.name)[1] == '.json':
             name = os.path.splitext(event.name)[0]
 
         if event.path == self.botbox.path and name:
@@ -70,8 +68,6 @@ class EventHandler(pyinotify.ProcessEvent):
 class BotBox(object):
     _ioloop = None
     _notifier = None
-    _timer = None
-    _tick = 0
 
     path = None
     bots = []
@@ -87,12 +83,6 @@ class BotBox(object):
         sys.path.append(path)
         self._ioloop = ioloop or IOLoop.instance()
 
-        # 1 min
-        self._tick = 0
-        self._timer = PeriodicCallback(self.on_timer,
-                60 * 1000, io_loop=self._ioloop)
-        self._timer.start()
-        
 
     def _get(self, modname):
         for bot in self.bots:
@@ -121,7 +111,10 @@ class BotBox(object):
                 else:
                     mod.bot._name = modname
                     self.bots.append(mod.bot)
-                    mod.bot._send_handler = self.send_handler
+
+                    # Set bot's irc handler
+                    mod.bot.say = self.send_handler
+
                     for t in mod.bot.targets:
                         self.join_handler(t)
                     logger.info('Bot "%s" is loaded', modname)
@@ -148,12 +141,13 @@ class BotBox(object):
         return True
 
 
-    def set_handler(self, send = empty_handler,
-            join = empty_handler,
-            part = empty_handler):
-        self.send_handler = send
-        self.join_handler = join
-        self.part_handler = part
+    def set_handler(self,
+            send_handler = empty_handler,
+            join_handler = empty_handler,
+            part_handler = empty_handler):
+        self.send_handler = send_handler
+        self.join_handler = join_handler
+        self.part_handler = part_handler
 
 
     def start(self):
@@ -175,88 +169,22 @@ class BotBox(object):
                 wm, self._ioloop, default_proc_fun = handle)
 
 
-    # TODO: 减少重复代码
-    def on_privmsg(self, nick, target, msg):
+    def dispatch(self, event, origin, *args, **kw):
+        func_name = 'on_' + event
+        if not origin:
+            raise Exception('No origin specified.')
         for bot in self.bots:
-            if 'PRIVMSG' in bot.trig_cmds and target in bot.targets:
+            if hasattr(bot, func_name) and origin in bot.targets:
+                func = getattr(bot, func_name)
                 try:
-                    if not bot.on_privmsg(nick, target, msg):
+                    logger.debug('Bot "%s", event: %s, origin: %s, %s, %s',
+                            bot._name, event, origin, args, kw)
+                    # If bot's event function return True value,
+                    # do not pass this message to next bot.
+                    if func(origin, *args, **kw):
                         break
                 except Exception as err:
-                    logger.error('"%s".on_privmsg() failed: %s', bot._name, err)
-
-
-    def on_action(self, nick, target, msg):
-        for bot in self.bots:
-            if 'ACTION' in bot.trig_cmds and target in bot.targets:
-                try:
-                    if not bot.on_action(nick, target, msg):
-                        break
-                except Exception as err:
-                    logger.error('"%s".on_action() failed: %s', bot._name, err)
-
-
-    def on_notice(self, nick, target, msg):
-        for bot in self.bots:
-            if 'NOTICE' in bot.trig_cmds and target in bot.targets:
-                try:
-                    if not bot.on_notice(nick, target, msg):
-                        break
-                except Exception as err:
-                    logger.error('"%s".on_notice() failed: %s', bot._name, err)
-
-
-    def on_join(self, nick, chan):
-        for bot in self.bots:
-            if 'JOIN' in bot.trig_cmds and chan in bot.targets:
-                try:
-                    if not bot.on_join(nick, chan):
-                        break
-                except Exception as err:
-                    logger.error('"%s".on_join() failed: %s', bot._name, err)
-
-
-    def on_part(self, nick, chan):
-        for bot in self.bots:
-            if 'PART' in bot.trig_cmds and chan in bot.targets:
-                try:
-                    if not bot.on_part(nick, chan):
-                        break
-                except Exception as err:
-                        logger.error('"%s".on_part() failed: %s',bot._name, err)
-
-
-    def on_quit(self, nick, chan, reason):
-        for bot in self.bots:
-            if 'QUIT' in bot.trig_cmds and chan in bot.targets:
-                try:
-                    if not bot.on_quit(nick, chan, reason):
-                        break
-                except Exception as err:
-                    logger.error('"%s".on_quit() failed: %s', bot._name, err)
-
-
-    def on_nick(self, old_nick, new_nick, chan):
-        for bot in self.bots:
-            if 'NICK' in bot.trig_cmds and chan in bot.targets:
-                try:
-                    if not bot.on_nick(old_nick, new_nick, chan):
-                        break
-                except Exception as err:
-                    logger.error('"%s".on_nick() failed: %s', bot._name, err)
-
-
-    def on_timer(self):
-        logger.debug('self._tick: %s', self._tick)
-        self._tick += 1
-
-        for bot in self.bots:
-            if 'TIMER' in bot.trig_cmds:
-                try:
-                    if not bot.on_timer():
-                        break
-                except Exception as err:
-                    logger.error('"%s".on_timer() failed: %s', bot._name, err)
+                    logger.error('"%s".%s() failed: %s', bot._name, func_name, err)
 
 
     def stop(self):

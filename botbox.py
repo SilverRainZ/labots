@@ -102,6 +102,8 @@ class BotBox(object):
                 mod = importlib.reload(sys.modules[modname])
             else:
                 mod = importlib.import_module(modname, None)
+
+            mod.bot._name = modname
             if check_bot(mod.bot):
                 try:
                     mod.bot.init()
@@ -109,7 +111,6 @@ class BotBox(object):
                     logger.error('Bot "%s" is failed to initialize: %s', modname, err)
                     return False
                 else:
-                    mod.bot._name = modname
                     self.bots.append(mod.bot)
 
                     # Set bot's irc handler

@@ -191,11 +191,11 @@ class IRC(object):
                     self.chans.append(chan)
                     self.names[chan] = set()
                     logger.info('%s has joined %s', self.nick, chan)
-                self.names[chan].add(self.nick)
+                self.names[chan].add(ircmsg.nick)
             elif ircmsg.cmd == 'PART':
                 chan = ircmsg.args[0]
                 try:
-                    self.names[chan].remove(self.nick)
+                    self.names[chan].remove(ircmsg.nick)
                 except KeyError as err:
                     logger.error('KeyError: %s', err)
                     logger.error('%s %s %s %s %s %s', ircmsg.nick, ircmsg.user,

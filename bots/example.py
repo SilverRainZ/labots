@@ -91,6 +91,10 @@ class ExampleBot(Bot):
     def on_ACTION(self, target, nick, msg):
         self.say(target, 'Action: %s' % msg)
 
+    def on_LABOTS_MSG(self, target, bot, nick, msg):
+        if bot:
+            self.say(target, '%s: Youe message is sent by %s' % (nick, bot))
+
 
 '''
 **IMPORTANCE**

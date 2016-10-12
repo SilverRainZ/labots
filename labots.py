@@ -16,7 +16,7 @@ logger.setLevel(logging.INFO)
 def main():
     botbox = BotBox(config.path)
 
-    irc = IRC(config.host, config.port, 'labots')
+    irc = IRC(config.host, config.port, 'labots', relaybots = config.relaybots)
 
     irc.set_callback(
             login_callback = botbox.start,

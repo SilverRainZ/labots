@@ -20,6 +20,23 @@ def empty_callback(*args, **kw):
     logger.debug("Unimplement callback %s %s" % (args, kw))
 
 
+# Strip IRC color code
+def strip(msg):
+    tmp = ''
+    is_color = 0
+    for c in msg:
+        if c in '\x02\x0f\x16\x1d\x1f':
+            continue
+        if c == '\x03':
+            is_color = 2
+            continue
+        if is_color and c in '0123456789':
+            is_color -= 1
+            continue
+        tmp += c
+    return tmp
+
+
 class IRCMsgType(Enum):
     PING = 0
     NOTICE = 1
@@ -57,6 +74,13 @@ class IRC(object):
     chans = []
     chans_ref = {}
     names = {}
+    relaybots = []
+    delims = [
+            ('<' ,'> '),
+            ('[' ,'] '),
+            ('(' ,') '),
+            ('{' ,'} '),
+            ]
 
     # External callbacks
     # Called when you are logined
@@ -65,12 +89,16 @@ class IRC(object):
     # for usage of event_callback, see `botbox.dispatch`
     event_callback = None
 
-    def __init__(self, host, port, nick, charset = 'utf-8', ioloop = False):
+    def __init__(self, host, port, nick,
+            relaybots = [],
+            charset = 'utf-8',
+            ioloop = False):
         logger.info('Connecting to %s:%s', host, port)
 
         self.host = host
         self.port = port
         self.nick = nick
+        self.relaybots = relaybots
 
         self._charset = charset
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -254,6 +282,20 @@ class IRC(object):
                 msg, cmd = ircmsg.msg, ircmsg.cmd
             nick, target = ircmsg.nick, ircmsg.args[0]
             self.event_callback(cmd, target, nick, msg)
+
+            # LABOTS_MSG = ACTION or PRIVMSG or NOTICE
+            # And it will:
+            # - Strip IRC color codes
+            # - Replace relaybot's nick with human's nick
+            bot = ''
+            msg = strip(msg)
+            for d in self.delims:
+                if msg.startswith(d[0]) and msg.find(d[1]) != -1:
+                    bot = nick
+                    nick = msg[len(d[0]):msg.find(d[1])]
+                    msg = msg[msg.find(d[1])+len(d[1]):]
+                    break
+            self.event_callback('LABOTS_MSG', target, bot, nick, msg)
 
 
     def _keep_alive(self):

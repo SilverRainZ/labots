@@ -63,11 +63,28 @@ class Bot(object):
         pass
     def on_NICK(chan, old_nick, new_nick):
         pass
+    # LABOTS_MSG = ACTION or PRIVMSG or NOTICE
+    # And it will:
+    # - Strip IRC color codes
+    # - Replace relaybot's nick with human's nick
+    # If message is not sent by a relaybot, bot = '',
+    # else bot = <relaybot's nick>
+    def on_LABOTS_MSG(target, bot, nick, msg):
+        pass
     '''
 
 
 
-events = [ 'PRIVMSG', 'ACTION', 'NOTICE', 'JOIN', 'PART', 'QUIT', 'NICK', ]
+events = [
+        'PRIVMSG',
+        'ACTION',
+        'NOTICE',
+        'JOIN',
+        'PART',
+        'QUIT',
+        'NICK',
+        'LABOTS_MSG',
+        ]
 
 def check_bot(bot):
     if not isinstance(bot.targets, list):

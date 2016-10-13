@@ -173,7 +173,7 @@ class BotBox(object):
     def on_LABOTS_MENTION_MSG(self, target, bot, nick, msg):
         if msg == 'help':
             for bot in self.bots:
-                if target in bot.targets:
+                if target in bot.targets and bot.usage:
                     self.send_handler(target, '[%s] %s' % (bot._name, bot.usage))
 
 

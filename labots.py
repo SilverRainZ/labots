@@ -20,7 +20,7 @@ def main():
 
     irc.set_callback(
             login_callback = botbox.start,
-            event_callback = botbox.dispatch,
+            event_callback = botbox.dispatch
             )
 
     botbox.set_handler(

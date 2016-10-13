@@ -47,6 +47,11 @@ class ExampleBot(Bot):
     form the following nicks.
     '''
     targets = ['#lasttest', '#nexttest']
+    usage = '''.echo <msg>: Echo a message;
+    When somebody join, part, quit, change his nick, sent a message;
+    When somebody sends a ACTION or NOTICE message, sent a message;
+    When somebody mentions my nick and saying 'poi', reply him with 'Poi~'
+    '''
 
     def init(self):
         '''
@@ -94,6 +99,10 @@ class ExampleBot(Bot):
     def on_LABOTS_MSG(self, target, bot, nick, msg):
         if bot:
             self.say(target, '%s: Youe message is sent by %s' % (nick, bot))
+
+    def on_LABOTS_MENTION_MSG(self, target, bot, nick, msg):
+        if msg == 'poi':
+            self.say(target, '%s: Poi~' % nick)
 
 
 '''

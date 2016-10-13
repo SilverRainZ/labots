@@ -16,6 +16,7 @@ class Bot(object):
     # Public for sub class
     targets = []
     config = {}
+    usage = ''
 
     # IRC handler functions
     # def say(target, msg)
@@ -70,6 +71,10 @@ class Bot(object):
     # If message is not sent by a relaybot, bot = '',
     # else bot = <relaybot's nick>
     def on_LABOTS_MSG(target, bot, nick, msg):
+        pass
+    # LABOTS_MENTION_MSG = LABOTS_MSG + labots's nick is mentioned at
+    # the head of message
+    def on_LABOTS_MENTION_MSG(target, bot, nick, msg):
         pass
     '''
 

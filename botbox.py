@@ -170,7 +170,18 @@ class BotBox(object):
                 wm, self._ioloop, default_proc_fun = handle)
 
 
+    def on_LABOTS_MENTION_MSG(self, target, bot, nick, msg):
+        if msg == 'help':
+            for bot in self.bots:
+                if target in bot.targets:
+                    self.send_handler(target, '[%s] %s' % (bot._name, bot.usage))
+
+
     def dispatch(self, event, origin, *args, **kw):
+        # Build-in behaviors
+        if event == 'LABOTS_MENTION_MSG':
+            self.on_LABOTS_MENTION_MSG(origin, *args, **kw)
+
         func_name = 'on_' + event
         if not origin:
             raise Exception('No origin specified.')

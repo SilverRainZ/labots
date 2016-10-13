@@ -297,6 +297,14 @@ class IRC(object):
                     break
             self.event_callback('LABOTS_MSG', target, bot, nick, msg)
 
+            # LABOTS_MENTION_MSG = LABOTS_MSG + labots's nick is mentioned at
+            # the head of message
+            words = msg.split(' ', maxsplit = 1)
+            if words[0] in [ self.nick + x for x in ['', ':', ','] ]:
+                if words[1:]:
+                    msg = words[1]
+                    self.event_callback('LABOTS_MENTION_MSG', target, bot, nick, msg)
+
 
     def _keep_alive(self):
         # Ping time out
@@ -388,9 +396,11 @@ class IRC(object):
 
 
     def send(self, target, msg):
-        self._sock_send('PRIVMSG %s :%s\r\n' % (target, msg))
-        # You will recv the message you sent
-        self.event_callback('PRIVMSG', target, self.nick, msg)
+        lines = msg.split('\n')
+        for line in lines:
+            self._sock_send('PRIVMSG %s :%s\r\n' % (target, line))
+            # You will recv the message you sent
+            self.event_callback('PRIVMSG', target, self.nick, line)
 
 
     def action(self, target, msg):

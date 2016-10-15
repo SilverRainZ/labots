@@ -396,12 +396,14 @@ class IRC(object):
         self._sock_send('PART %s\r\n' % chan)
 
 
-    def send(self, target, msg):
+    # recv_msg: Whether receive the message you sent
+    def send(self, target, msg, recv_msg = True):
         lines = msg.split('\n')
         for line in lines:
             self._sock_send('PRIVMSG %s :%s\r\n' % (target, line))
             # You will recv the message you sent
-            self.event_callback('PRIVMSG', target, self.nick, line)
+            if recv_msg:
+                self.event_callback('PRIVMSG', target, self.nick, line)
 
 
     def action(self, target, msg):

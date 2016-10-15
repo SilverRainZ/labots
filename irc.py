@@ -289,12 +289,13 @@ class IRC(object):
             # - Replace relaybot's nick with human's nick
             bot = ''
             msg = strip(msg)
-            for d in self.delims:
-                if msg.startswith(d[0]) and msg.find(d[1]) != -1:
-                    bot = nick
-                    nick = msg[len(d[0]):msg.find(d[1])]
-                    msg = msg[msg.find(d[1])+len(d[1]):]
-                    break
+            if nick in self.relaybots:
+                for d in self.delims:
+                    if msg.startswith(d[0]) and msg.find(d[1]) != -1:
+                        bot = nick
+                        nick = msg[len(d[0]):msg.find(d[1])]
+                        msg = msg[msg.find(d[1])+len(d[1]):]
+                        break
             self.event_callback('LABOTS_MSG', target, bot, nick, msg)
 
             # LABOTS_MENTION_MSG = LABOTS_MSG + labots's nick is mentioned at

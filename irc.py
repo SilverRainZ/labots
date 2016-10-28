@@ -17,23 +17,49 @@ logger.setLevel(logging.INFO)
 
 
 def empty_callback(*args, **kw):
-    logger.debug("Unimplement callback %s %s" % (args, kw))
+    logger.debug('Unimplement callback %s %s' % (args, kw))
 
 
 # Strip IRC color code
+'''
+ref: https://github.com/myano/jenni/wiki/IRC-String-Formatting
+
+\x02 	bold
+\x1d 	italic text
+\x1f 	underlined text
+\x16 	swap background and foreground colors ("reverse video")
+\x0f 	reset all formatting
+
+\x03<fg>,<bg>text\x03
+fg bg :: <= 2 digits number
+'''
 def strip(msg):
+    logger.debug('raw msg: %s', msg)
     tmp = ''
     is_color = 0
+    is_fg = is_bg = 0
     for c in msg:
         if c in '\x02\x0f\x16\x1d\x1f':
             continue
         if c == '\x03':
-            is_color = 2
+            is_fg = 2
+            is_bg = 2
             continue
-        if is_color and c in '0123456789':
-            is_color -= 1
+
+        if is_fg and c in '0123456789':
+            is_fg -= 1
             continue
+        elif c == ',' and is_bg == 2:
+            is_fg = 0
+            is_bg = 2
+            continue
+        elif is_fg == 0 and is_bg and c in '0123456789':
+            is_bg -= 1
+            continue
+        else:
+            is_fg = is_bg = 0
         tmp += c
+    logger.debug('msg: %s', tmp)
     return tmp
 
 

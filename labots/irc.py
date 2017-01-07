@@ -6,10 +6,10 @@ import time
 import socket
 import logging
 import functools
-from ircnumeric import *
 from enum import Enum
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.iostream import IOStream
+from .ircnumeric import *
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -441,6 +441,8 @@ class IRC(object):
     def topic(self, chan, topic):
         self._sock_send('TOPIC %s :%s\r\n' % (chan, topic))
 
+    def kick(self, chan, nick, reason):
+        self._sock_send('KICK %s %s :%s\r\n' % (chan, nick, topic))
 
     def quit(self, reason = '食饭'):
         self._sock_send('QUIT :%s\r\n' % reason)

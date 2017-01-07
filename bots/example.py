@@ -3,7 +3,7 @@
 
 import os
 import json
-from bot import Bot
+from labots.bot import Bot
 
 '''
 Bot:
@@ -12,6 +12,8 @@ Bot:
     of this bot script.
 
     So, the minimal bot script is:
+
+        from labots.bot import Bot
 
         class MinBot(Bot):
             pass

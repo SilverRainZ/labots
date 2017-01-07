@@ -20,6 +20,7 @@ Requires
 * Python 3
 * Pyinotify >= 0.9.4
 * Tornado >= 3.2.2
+* YAML
 
 
 Usage

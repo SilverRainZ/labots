@@ -5,7 +5,7 @@ import logging
 import pyinotify
 import importlib
 from tornado.ioloop import IOLoop, PeriodicCallback
-from bot import Bot, check_bot
+from .bot import Bot, check_bot
 
 # Initialize logging
 logger = logging.getLogger(__name__)

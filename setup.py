@@ -9,5 +9,5 @@ setup(name = 'labots',
         license = 'GPL3',
         packages = ['labots'],
         scripts = ['labots/labots'],
-        install_requires=['pyinotify', 'tornado'],
+        install_requires=['pyinotify', 'tornado', 'yaml'],
         zip_safe = False)

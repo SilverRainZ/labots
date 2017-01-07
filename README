@@ -1,8 +1,7 @@
-LABOTS
+LABots
 ======
 
-IRC bot framework written in python 3.x, just works for myself.
-
+Flexible IRC bot framework.
 
 Features
 --------
@@ -10,7 +9,7 @@ Features
 * Run multiple bots with single IRC instance
 * Bots do not affect each other
 * Useful and flexible IRC bot interface
-* Dynamic {load,unload} bots when they are modified
+* Dynamic {load,unload} bots when they are modified [BROKEN]
 * Asynchronous socket
 
 
@@ -26,26 +25,30 @@ Requires
 Usage
 -----
 
-Run LABots: Change fields in `config.py`, and run `./labots.py`.
+Install LABots (optional): `python setup.py install`
 
-    config.py
+Run LABots: Create file `labots.yaml` as follow, and run `labots` in the same
+directory (If you don't want to install LABots in your system, just run
+`PYTHONPATH=$PYTHONPATH:$PWD labots/labots`).
+
+    labots.yaml
     e.g:
-        host = 'irc.freenode.net'   # IRC server
-        port = 6666                 # Port
-        nick = 'labots'             # IRC bot nick name
-        path = 'bots'               # Path of bot scripts
+        host: 'irc.freenode.net'   # IRC server
+        port: 6666                 # Port
+        nick: 'labots'             # IRC bot nick name
+        path: 'bots'               # Path of bot scripts
 
     LABots will loads all bot scripts in `bots` directory, when script file
     (*.py) or configure file (*.json) changed, bot script will be reload
     automatically. file which name starts with `_` or `.` will be ignored.
 
-Write a bot: See `bots/example.py` or <https://github.com/lastavenger/bots>
+Write a bot: See `bots/example.py` or <https://github.com/SilverRainZ/bots>
 
 
 Bots
 ----
 
-See <https://github.com/LastAvenger/bots>.
+See <https://github.com/SilverRainZ/bots>.
 
 
 References

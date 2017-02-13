@@ -6,7 +6,7 @@ import yaml
 import logging
 from tornado.ioloop import IOLoop
 from labots.botbox import BotBox
-from labots.irc import IRC
+from labots.irc.irc import IRC
 
 # Initialize logging
 logger = logging.getLogger(__name__)

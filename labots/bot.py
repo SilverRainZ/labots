@@ -17,6 +17,7 @@ class Bot(object):
     targets = []
     config = {}
     usage = ''
+    restart = True
 
     # IRC handler functions
     # def say(target, msg)

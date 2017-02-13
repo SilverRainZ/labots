@@ -9,7 +9,7 @@ import functools
 from enum import Enum
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.iostream import IOStream
-from .ircnumeric import *
+from .numeric import *
 
 # Initialize logging
 logger = logging.getLogger(__name__)

@@ -16,10 +16,10 @@ Features
 Requires
 --------
 
-* Python 3
-* Pyinotify >= 0.9.4
-* Tornado >= 3.2.2
-* YAML
+* python 3
+* python-pyinotify >= 0.9.4
+* python-tornado >= 3.2.2
+* python-yaml
 
 
 Usage
@@ -27,11 +27,11 @@ Usage
 
 Install LABots (optional): `python setup.py install`
 
-Run LABots: Create file `labots.yaml` as follow, and run `labots` in the same
-directory (If you don't want to install LABots in your system, just run
-`PYTHONPATH=$PYTHONPATH:$PWD labots/labots`).
+Run LABots: Create file `config.yaml` as follow, and run `labots -c config.yaml`
+in the same directory (If you don't want to install LABots in your system,
+just run `./labots.py -c config.yaml` in project directory).
 
-    labots.yaml
+    config.yaml
     e.g:
         host: 'irc.freenode.net'   # IRC server
         port: 6666                 # Port

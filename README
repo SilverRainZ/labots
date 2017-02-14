@@ -9,7 +9,7 @@ Features
 * Run multiple bots with single IRC instance
 * Bots do not affect each other
 * Useful and flexible IRC bot interface
-* Dynamic {load,unload} bots when they are modified [BROKEN]
+* Dynamic {load,unload} bots when they are modified
 * Asynchronous socket
 
 
@@ -33,10 +33,10 @@ just run `./labots.py -c config.yaml` in project directory).
 
     config.yaml
     e.g:
-        host: 'irc.freenode.net'   # IRC server
-        port: 6666                 # Port
-        nick: 'labots'             # IRC bot nick name
-        path: 'bots'               # Path of bot scripts
+        host: irc.freenode.net  # IRC server
+        port: 6666              # Port
+        nick: labots            # IRC bot nick name
+        path: bots              # Path of bot scripts
 
     LABots will loads all bot scripts in `bots` directory, when script file
     (*.py) or configure file (*.json) changed, bot script will be reload
@@ -57,6 +57,7 @@ References
 * https://github.com/lilydjwg/archrepo2
 * https://github.com/nod/iobot
 * https://github.com/LukeusMaximus/Python-IRC-Bot-Framework
+* https://github.com/lilydjwg/winterpy
 
 
 License

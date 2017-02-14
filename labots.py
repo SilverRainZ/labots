@@ -13,7 +13,7 @@ from labots import clogger
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# logger.setLevel(logging.INFO)
 
 
 def main():

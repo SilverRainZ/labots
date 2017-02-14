@@ -1,4 +1,4 @@
-# Ref: https://github.com/lilydjwg/winterpy/blob/master/pylib/nicelogger.py 
+# Ref: https://github.com/lilydjwg/winterpy/blob/master/pylib/nicelogger.py
 import time
 import logging
 import pkgutil
@@ -19,7 +19,7 @@ level2name = {
 
 name2color = {
         'CRIT': '\x1b[31m%s\x1b[0m',
-        'ERR':  '\x1b[31m%s\x1b[0m',  
+        'ERR':  '\x1b[31m%s\x1b[0m',
         'WARN': '\x1b[33m%s\x1b[0m',
         'INFO': '\x1b[32m%s\x1b[0m',
         'DBG':  '\x1b[37m%s\x1b[0m',

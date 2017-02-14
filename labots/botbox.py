@@ -77,7 +77,8 @@ class BotBox(object):
     part_handler = None
 
     def __init__(self, path, ioloop = None):
-        logger.info('Path: "%s"', path)
+        path = path if not path.startswith('./') else path[2:]
+        logger.info('Bots path: "%s"', path)
 
         self.path = path
         sys.path.append(path)
@@ -174,8 +175,7 @@ class BotBox(object):
         if msg == 'help':
             for bot in self.bots:
                 if target in bot.targets and bot.usage:
-                    self.send_handler(target, '[%s] %s' % (bot._name, bot.usage))
-
+                    self.send_handler(target, '[%s] %s' % (bot._name, bot.usage)) 
 
     def dispatch(self, event, origin, *args, **kw):
         # Build-in behaviors

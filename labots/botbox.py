@@ -9,7 +9,7 @@ from .bot import Bot, check_bot
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# logger.setLevel(logging.INFO)
 
 
 def empty_handler(*args, **kw):

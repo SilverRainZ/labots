@@ -1,5 +1,10 @@
-host: 'irc.freenode.net'
+host: irc.freenode.net
 port: 6667
-nick: 'labots'
-path: './bots'
-relaybots: ['teleboto', 'tg2arch', 'xmppbot', 'toxsync', 'tox2sync']
+nick: labots
+path: ./bots
+relaybots:
+    - teleboto
+    - tg2arch
+    - xmppbot
+    - toxsync
+    - tox2sync

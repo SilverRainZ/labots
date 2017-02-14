@@ -13,7 +13,7 @@ from .numeric import *
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# logger.setLevel(logging.INFO)
 
 
 def empty_callback(*args, **kw):
@@ -286,7 +286,7 @@ class IRC(object):
 
         # Error message
         if ircmsg.cmd[0] in ['4', '5']:
-            logger.error('Error message: %s', ircmsg.msg)
+            logger.warn('Error message: %s', ircmsg.msg)
         elif ircmsg.cmd in ['JOIN', 'PART']:
             nick, chan = ircmsg.nick, ircmsg.args[0] or ircmsg.msg
             self.event_callback(ircmsg.cmd, chan, nick)

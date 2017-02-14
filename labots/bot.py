@@ -5,7 +5,7 @@ import logging
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# logger.setLevel(logging.INFO)
 
 # IRC bot prototype
 class Bot(object):

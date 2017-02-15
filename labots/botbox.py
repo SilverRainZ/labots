@@ -61,8 +61,8 @@ class EventHandler(pyinotify.ProcessEvent):
             name = os.path.splitext(event.name)[0]
 
         if event.path == self.botbox.path and name:
-            self.botbox._unload(name)
-            self.botbox._load(name)
+            if self.botbox._unload(name):
+                self.botbox._load(name)
 
 
 class BotBox(object):
@@ -128,8 +128,8 @@ class BotBox(object):
 
     def _unload(self, modname):
         bot = self._get(modname)
-        if not bot:
-            logger.warn('"%s" is not loaded', modname)
+        if not bot or not bot.reload:
+            # logger.warn('"%s" is not loaded', modname)
             return False
         try:
             bot.finalize()

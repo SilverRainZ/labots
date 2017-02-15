@@ -1,5 +1,6 @@
 # Example irc bot
-# ../bot.py is its prototype
+# labots/bot.py is its prototype
+# For LABots 1.2
 
 import os
 import json
@@ -49,11 +50,19 @@ class ExampleBot(Bot):
     form the following nicks.
     '''
     targets = ['#lasttest', '#nexttest']
+
+    ''' `usage` will be show when received a "<nick>: help"-like message '''
     usage = '''.echo <msg>: Echo a message;
     When somebody join, part, quit, change his nick, sent a message;
     When somebody sends a ACTION or NOTICE message, sent a message;
     When somebody mentions my nick and saying 'poi', reply him with 'Poi~'
     '''
+
+    '''
+    Set `reload` to False can prevent the bot from being restarted (for some
+    bot has a internal HTTP server)
+    '''
+    reload = True
 
     def init(self):
         '''

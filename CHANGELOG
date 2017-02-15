@@ -1,0 +1,30 @@
+2017.01.08 v1.1
+---------------
+
+* New event: `ACTION`,  `NOTICE`
+* New event: `LABOTS_MSG` and `LABOTS_MENTIONED_MSG`, for the bot which only
+  care about IRC message content
+* Add: `bot.usage`, the bot's usage will be show when received a
+  "labots: help"-like message
+* Add: `bot.say(..., recv_msg = False)` allow bot doesn't receive the message
+  sent by itself
+* Add: setup.py, LABots now can installed as a python package using
+  `python3 setup.py install`, for Arch Linux user, you can install labots-git
+  from AUR
+* Fixed: `check_bot()` failed because `bot._name` haven't set yet
+* Fixed: wrong nick after receicved a `NICK` message
+* Fixed: irc color strip
+* Changed: bot will auto read config from <botname>.json
+* Changed: event function signatures, these functions are auto generated from
+  events now
+* Change: remove config.py and use YAML as configure file
+
+
+2016.09.25 v1.0
+---------------
+
+* Run multiple bots with single IRC instance
+* Bots do not affect each other
+* Useful and flexible IRC bot interface
+* Dynamic {load,unload} bots when they are modified
+* Asynchronous socket

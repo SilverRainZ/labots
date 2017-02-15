@@ -1,6 +1,6 @@
 # Example irc bot
 # labots/bot.py is its prototype
-# For LABots 1.2
+# For LABots 1.1
 
 import os
 import json
@@ -51,7 +51,9 @@ class ExampleBot(Bot):
     '''
     targets = ['#lasttest', '#nexttest']
 
-    ''' `usage` will be show when received a "<nick>: help"-like message '''
+    '''
+    [v1.1] `usage` will be show when received a "<nick>: help"-like message
+    '''
     usage = '''.echo <msg>: Echo a message;
     When somebody join, part, quit, change his nick, sent a message;
     When somebody sends a ACTION or NOTICE message, sent a message;
@@ -59,8 +61,8 @@ class ExampleBot(Bot):
     '''
 
     '''
-    Set `reload` to False can prevent the bot from being restarted (for some
-    bot has a internal HTTP server)
+    [v1.2] Set `reload` to False can prevent the bot from being restarted
+    (for some bot has a internal HTTP server)
     '''
     reload = True
 
@@ -101,16 +103,20 @@ class ExampleBot(Bot):
         if msg.startswith(cmd):
             self.say(target, '%s: %s' % (nick, msg[len(cmd):]))
 
+    ''' [v1.1] '''
     def on_NOTICE(self, target, nick, msg):
         self.say(target, 'Notice: %s' % msg)
 
+    ''' [v1.1] '''
     def on_ACTION(self, target, nick, msg):
         self.say(target, 'Action: %s' % msg)
 
+    ''' [v1.1] '''
     def on_LABOTS_MSG(self, target, bot, nick, msg):
         if bot:
             self.say(target, '%s: Youe message is sent by %s' % (nick, bot))
 
+    ''' [v1.1] '''
     def on_LABOTS_MENTION_MSG(self, target, bot, nick, msg):
         if msg == 'poi':
             self.say(target, '%s: Poi~' % nick)

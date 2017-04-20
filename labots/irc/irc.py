@@ -93,6 +93,8 @@ class IRC(object):
     _timer = None
     _last_pong = None
     _is_reconnect = 0
+    _buffers = []
+    _send_timer = None
 
     host = None
     port = None
@@ -137,9 +139,18 @@ class IRC(object):
                 60 * 1000, io_loop=self._ioloop)
         self._timer.start()
 
+        self._send_timer = PeriodicCallback(self._sock_send,
+                300, io_loop=self._ioloop)
+        self._send_timer.start()
 
-    def _sock_send(self, data):
-        return self._stream.write(bytes(data, self._charset))
+    def _sock_send(self):
+        if (self._buffers[0:]):
+            data = self._buffers.pop(0);
+            return self._stream.write(data)
+
+    def _period_send(self, data):
+        # Data will be sent in `self._sock_send()`
+        self._buffers.append(bytes(data, self._charset))
 
 
     def _sock_recv(self):
@@ -352,7 +363,7 @@ class IRC(object):
 
 
     def _chnick(self, nick):
-        self._sock_send('NICK %s\r\n' % nick)
+        self._period_send('NICK %s\r\n' % nick)
 
 
     def _on_login(self, nick):
@@ -372,8 +383,8 @@ class IRC(object):
         logger.info('Try to login as "%s"', self.nick)
 
         self._chnick(self.nick)
-        self._sock_send('USER %s %s %s %s\r\n' % (self.nick, 'labots',
-            'localhost', 'lastavengers#outlook.com'))
+        self._period_send('USER %s %s %s %s\r\n' % (self.nick, 'labots',
+            'localhost', 'https://github.com/SilverRainZ/labots'))
 
         self._sock_recv()
 
@@ -382,7 +393,7 @@ class IRC(object):
         logger.debug('Pong!')
 
         self._last_pong = time.time()
-        self._sock_send('PONG :labots!\n')
+        self._period_send('PONG :labots!\n')
 
 
     def set_callback(self,
@@ -403,7 +414,7 @@ class IRC(object):
             self.chans_ref[chan] = 1
 
         logger.debug('Try to join %s', chan)
-        self._sock_send('JOIN %s\r\n' % chan)
+        self._period_send('JOIN %s\r\n' % chan)
 
 
     def part(self, chan):
@@ -419,33 +430,33 @@ class IRC(object):
         self.chans_ref.pop(chan, None)
 
         logger.debug('Try to part %s', chan)
-        self._sock_send('PART %s\r\n' % chan)
+        self._period_send('PART %s\r\n' % chan)
 
 
     # recv_msg: Whether receive the message you sent
     def send(self, target, msg, recv_msg = True):
         lines = msg.split('\n')
         for line in lines:
-            self._sock_send('PRIVMSG %s :%s\r\n' % (target, line))
+            self._period_send('PRIVMSG %s :%s\r\n' % (target, line))
             # You will recv the message you sent
             if recv_msg:
                 self.event_callback('PRIVMSG', target, self.nick, line)
 
 
     def action(self, target, msg):
-        self._sock_send('PRIVMSG %s :\1ACTION %s\1\r\n')
+        self._period_send('PRIVMSG %s :\1ACTION %s\1\r\n')
         # You will recv the message you sent
         self.event_callback('ACTION', target, self.nick, msg)
 
 
     def topic(self, chan, topic):
-        self._sock_send('TOPIC %s :%s\r\n' % (chan, topic))
+        self._period_send('TOPIC %s :%s\r\n' % (chan, topic))
 
     def kick(self, chan, nick, reason):
-        self._sock_send('KICK %s %s :%s\r\n' % (chan, nick, topic))
+        self._period_send('KICK %s %s :%s\r\n' % (chan, nick, topic))
 
     def quit(self, reason = '食饭'):
-        self._sock_send('QUIT :%s\r\n' % reason)
+        self._period_send('QUIT :%s\r\n' % reason)
 
 
     def stop(self):

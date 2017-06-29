@@ -126,10 +126,13 @@ class BotBox(object):
             return False
 
 
-    def _unload(self, modname):
+    def _unload(self, modname, force = False):
         bot = self._get(modname)
-        if not bot or not bot.reload:
-            # logger.warn('"%s" is not loaded', modname)
+        if not bot:
+            logger.warn('"%s" is not loaded', modname)
+            return False
+        if  not bot.reload and not force:
+            logger.warn('"%s" cen not be reloaded', modname)
             return False
         try:
             bot.finalize()
@@ -201,7 +204,7 @@ class BotBox(object):
 
     def stop(self):
         while self.bots:
-            self._unload(self.bots[0]._name)
+            self._unload(self.bots[0]._name, force = True) # Froce unload
         self._notifier.stop()
 
 

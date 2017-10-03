@@ -140,7 +140,7 @@ class IRC(object):
         self._timer.start()
 
         self._send_timer = PeriodicCallback(self._sock_send,
-                300, io_loop=self._ioloop)
+                600, io_loop=self._ioloop)
         self._send_timer.start()
 
     def _sock_send(self):

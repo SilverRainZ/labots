@@ -1,3 +1,12 @@
+2018.03.08 v1.2
+---------------
+
+* Limit the interval of sending message
+* Add colorful logger
+* Add `bot.reload = False` to prevent bot from being reloaded
+* Fixed: pyinotify doesn't work when path startswith './'
+
+
 2017.01.08 v1.1
 ---------------
 

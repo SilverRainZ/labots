@@ -10,14 +10,14 @@ class labots_install_scripts(install_scripts):
             shutil.move(file, renamed_file)
 
 setup(name = 'labots',
-        version = '1.1',
+        version = '2.0rc1',
         description = 'Flexible IRC bot framework',
         url = 'https://github.com/SilverRainZ/labots',
-        author = 'SilverRainZ',
-        author_email = 'silverrainz@outlook.com',
+        author = 'Shengyu Zhang',
+        author_email = 'i@silverrainz.me',
         license = 'GPL3',
         packages = ['labots', 'labots.irc'],
         scripts = ['labots.py'],
-        install_requires=['pyinotify', 'tornado', 'yaml', 'shutil'],
+        install_requires=['pyyaml', 'pydle', 'shutil'],
         cmdclass = { 'install_scripts': labots_install_scripts },
         zip_safe = False)

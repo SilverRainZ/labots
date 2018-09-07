@@ -26,7 +26,10 @@ def main():
         config = yaml.load(f)
 
     botbox = BotBox(config['path'])
-    irc = IRC(config['host'], config['port'], 'labots', relaybots = config['relaybots'])
+    irc = IRC(config['host'], config['port'], 'labots',
+            relaybots = config['relaybots'],
+            tls = config['tls']
+            )
 
     irc.set_callback(
             login_callback = botbox.start,

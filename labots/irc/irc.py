@@ -4,11 +4,12 @@
 import re
 import time
 import socket
+import ssl
 import logging
 import functools
 from enum import Enum
 from tornado.ioloop import IOLoop, PeriodicCallback
-from tornado.iostream import IOStream
+from tornado.iostream import IOStream, SSLIOStream
 from .numeric import *
 
 # Initialize logging
@@ -89,6 +90,7 @@ class IRC(object):
     # Private
     _stream = None
     _charset = None
+    _tls = None
     _ioloop = None
     _timer = None
     _last_pong = None
@@ -120,6 +122,7 @@ class IRC(object):
     def __init__(self, host, port, nick,
             relaybots = [],
             charset = 'utf-8',
+            tls = False,
             ioloop = False):
         logger.info('Connecting to %s:%s', host, port)
 
@@ -129,11 +132,15 @@ class IRC(object):
         self.relaybots = relaybots
 
         self._charset = charset
+        self._tls = tls
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._ioloop = ioloop or IOLoop.instance()
-        self._stream = IOStream(sock, io_loop = self._ioloop)
-        self._stream.connect((host, port), self._login)
-
+        if self._tls:
+            self._stream = SSLIOStream(sock, io_loop = self._ioloop)
+            self._stream.connect((self.host, self.port), self._login, server_hostname = self.host)
+        else:
+            self._stream = IOStream(sock, io_loop = self._ioloop)
+            self._stream.connect((self.host, self.port), self._login)
         self._last_pong = time.time()
         self._timer = PeriodicCallback(self._keep_alive,
                 60 * 1000, io_loop=self._ioloop)
@@ -172,9 +179,14 @@ class IRC(object):
         self._is_reconnect = 1
 
         self._stream.close()
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._stream = IOStream(sock, io_loop = self._ioloop)
-        self._stream.connect((self.host, self.port), self._login)
+        if self._tls:
+            self._stream = SSLIOStream(sock, io_loop = self._ioloop)
+            self._stream.connect((self.host, self.port), self._login, server_hostname = self.host)
+        else:
+            self._stream = IOStream(sock, io_loop = self._ioloop)
+            self._stream.connect((self.host, self.port), self._login)
 
 
     # IRC message parser, return tuple (IRCMsgType, IRCMsg)

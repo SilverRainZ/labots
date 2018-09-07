@@ -1,5 +1,6 @@
 host: irc.freenode.net
 port: 6667
+tls: false
 nick: labots
 path: ./bots
 relaybots:

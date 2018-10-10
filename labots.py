@@ -1,55 +1,59 @@
 #!/usr/bin/env python3
 # -*- encoding: UTF-8 -*-
 
-import sys
 import argparse
 import logging
-import yaml
-from tornado.ioloop import IOLoop
-from labots.botbox import BotBox
-from labots.irc.irc import IRC
-from labots import clogger
 
+from labots.config import config
+from labots.irc import client
+from labots.bot import manager
+from labots.api import server
+from labots.utils import clogger
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.INFO)
-
+logger.setLevel(logging.INFO)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", default = 'config.yaml', type = str,
+    parser.add_argument("-c", "--config",
+            default = 'labots.yaml',
+            type = str,
             help = "specified a config file")
     args = parser.parse_args()
-
     with open(args.config, 'r') as f:
-        config = yaml.load(f)
+        try:
+            cfg = config.load_config(f.read())
+        except (KeyError, ValueError) as e:
+            logger.error(e)
+            return 1
 
-    botbox = BotBox(config['path'])
-    irc = IRC(config['host'], config['port'], 'labots',
-            relaybots = config['relaybots'],
-            tls = config['tls']
-            )
-
-    irc.set_callback(
-            login_callback = botbox.start,
-            event_callback = botbox.dispatch
-            )
-
-    botbox.set_handler(
-            send_handler = irc.send,
-            join_handler = irc.join,
-            part_handler = irc.part
-            )
+    irc = client.Client(
+            host = cfg.irc.host,
+            port = cfg.irc.port,
+            tls = cfg.irc.tls,
+            tls_verify = cfg.irc.tls_verify,
+            nickname = cfg.irc.nickname,
+            username = cfg.irc.username,
+            realname = cfg.irc.realname)
+    mgr = manager.Manager(
+            path = cfg.manager.path,
+            config_path = cfg.manager.config)
+    api = server.Server(
+            listen = cfg.server.listen,
+            manager = mgr)
+    mgr.action = irc
+    irc.event = mgr
 
     try:
-        IOLoop.instance().start()
+        irc.connect()
+        mgr.load_bots()
+        api.serve()
+        irc.handle()
     except KeyboardInterrupt:
-        botbox.stop()
-        irc.stop()
-        IOLoop.instance().stop()
-        logger.info('Exit.')
-        return 0
+        mgr.unload_bots()
+        api.stop()
+        irc.disconnect()
 
 if __name__ == '__main__':
     filelog = logging.FileHandler('labots.log')

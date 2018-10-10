@@ -1,12 +1,6 @@
 # Ref: https://github.com/lilydjwg/winterpy/blob/master/pylib/nicelogger.py
 import time
 import logging
-import pkgutil
-
-import labots
-
-internal_mod = [modname for (importer, modname, ispkg)
-        in pkgutil.iter_modules(labots.__path__)] + [labots.__name__]
 
 level2name = {
         logging.CRITICAL:   'CRIT',
@@ -33,10 +27,6 @@ def record_factory(*args, **kwargs):
     # record.custom_attribute = 0xdecafbad
     record.levelname = level2name.get(args[1])
 
-    # Is internal module
-    if record.module not in internal_mod:
-        record.module = 'bots.' + record.module
-
     return record
 
 logging.setLogRecordFactory(record_factory)
@@ -55,7 +45,7 @@ class Formatter(logging.Formatter):
             record.message = "Bad message (%r): %r" % (e, record.__dict__)
         record.asctime = time.strftime("%m-%d %H:%M:%S", self.converter(record.created))
 
-        prefix = '[%(levelname)4s %(asctime)s %(module)6s]' % record.__dict__
+        prefix = '[%(levelname)4s %(asctime)s %(name)6s]' % record.__dict__
         prefix = name2color.get(record.levelname) % prefix
         formatted = prefix + ' ' + record.message
 

@@ -18,4 +18,4 @@ manager:
     config: ./bots/bots.yaml    # [str,optional] Path of bot config file
 
 server:
-    # listen: unix:///tmp/labots.sock # [str,default] API server listen address
+    # listen: http://localhost:30553    # [str,default] API server listen address

@@ -1,7 +1,6 @@
 import logging
 import tornado.web
 import tornado.httpserver
-from tornado.netutil import bind_unix_socket
 from http import HTTPStatus
 from urllib.parse import urlparse
 
@@ -108,8 +107,5 @@ class Server(tornado.web.Application, Singleton):
         url = urlparse(self._listen)
         if url.scheme in ['', 'http']:
             self._server.listen(url.port, address = url.hostname)
-        elif url.scheme in ['unix']:
-            socket = bind_unix_socket(url.path)
-            self._server.add_socket(socket)
         else:
             raise NotImplementedError('Unsupported scheme %s' % repr(url.scheme))

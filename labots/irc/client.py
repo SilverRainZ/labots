@@ -26,9 +26,9 @@ class Client(Action, Singleton):
     _event: Event = None
     _client: Wrapper = None
     _channels: Dict[str,int] = {} # Channel reference count
-    
+
     def __init__(self,
-            host: str = None, 
+            host: str = None,
             port: int = None,
             tls: bool = None,
             tls_verify: bool = None,
@@ -60,6 +60,8 @@ class Client(Action, Singleton):
         self._event = event
 
     def connect(self):
+        logger.info('Connecting to IRC server %s://%s:%d ...',
+                'ircs' if self._tls else 'irc', self._host, self._port)
         self._client = Wrapper(
                 event = self._event,
                 nickname = self._nickname,
@@ -74,9 +76,11 @@ class Client(Action, Singleton):
                 )
 
     def handle(self):
+        logger.info('Starting handle messages from IRC server...')
         self._client.handle_forever()
 
     def disconnect(self):
+        logger.info('Disconnecting from IRC server...')
         self._client.disconnect()
 
     ''' Implement ..common.event.Event '''

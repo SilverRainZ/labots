@@ -64,7 +64,7 @@ class Manager(Event, Singleton):
 
         if self._cur_name in cfgs:
             cfg = cfgs[self._cur_name]
-            logger.info('Config of bot %s is loaded', repr(self._cur_name))
+            logger.info('Configuration of bot %s is loaded', repr(self._cur_name))
         else:
             cfg = None
 
@@ -133,6 +133,7 @@ class Manager(Event, Singleton):
 
 
     def load_bots(self):
+        logger.info('Loading bots from path %s ...', repr(self._path))
         for f in os.listdir(self._path):
             name = self._file_name_to_module_name(f)
             if not name:
@@ -144,6 +145,7 @@ class Manager(Event, Singleton):
 
 
     def unload_bots(self):
+        logger.info('Unloading all bots...')
         for name in [name for name, _ in self._bots.items()]:
             try:
                 # Froce unload

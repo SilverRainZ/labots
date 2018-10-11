@@ -4,6 +4,7 @@ import pprint
 from typing import Dict
 
 from labots.config import checker
+from labots.common import meta
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -37,13 +38,13 @@ def load_config(raw: str) -> Config:
                 default = True),
             checker.Item(key = ['irc', 'nickname'],
                 checkers = [checker.is_str, checker.is_not_empty_str],
-                default = 'labots'),
+                default = meta.name),
             checker.Item(key = ['irc', 'username'],
                 checkers = [checker.is_str, checker.is_not_empty_str],
-                default = 'labots'),
+                default = meta.name),
             checker.Item(key = ['irc', 'realname'],
                 checkers = [checker.is_str, checker.is_not_empty_str],
-                default = 'https://github.com/SilverRainZ/labots'),
+                default = meta.url),
             checker.Item(key = ['irc', 'password'],
                 checkers = [checker.is_str],
                 default = ''),
@@ -56,7 +57,7 @@ def load_config(raw: str) -> Config:
 
             checker.Item(key = ['server', 'listen'],
                 checkers = [checker.is_str],
-                default = 'unix:///tmp/labots.sock'),
+                default = meta.default_listen),
             ])
     except (KeyError, ValueError) as e:
         raise e

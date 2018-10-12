@@ -110,6 +110,10 @@ class Manager(Event, Singleton):
             raise LoadError('Module is imported but not bot is loaded',
                     name = name)
 
+        for _, bot in self._bots.items():
+            for t in bot.targets:
+                self.action.join(t)
+
         logger.info('Bot %s is loaded', repr(name))
 
 
@@ -162,9 +166,6 @@ class Manager(Event, Singleton):
     """
 
     def on_connect(self):
-        for _, bot in self._bots.items():
-            for t in bot.targets:
-                self.action.join(t)
         for _, bot in self._bots.items():
             try:
                 bot.on_connect()

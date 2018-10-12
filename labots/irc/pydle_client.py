@@ -14,7 +14,7 @@ def pydle_message_to_message(msg) -> Message:
     _msg.params = msg.params
     return _msg
 
-class Wrapper(pydle.Client):
+class PydleClient(pydle.Client):
     """
     A simple wrapper of pydle.Client, convert pydle callbacks to
     ..common.event.Event.

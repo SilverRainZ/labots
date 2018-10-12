@@ -108,7 +108,7 @@ class Client(Action, Singleton):
 
     def part(self, channel: str, reason: str = None):
         # Decrease reference count
-        if self._channels[channel] >= 1:
+        if self._channels[channel] > 1:
             self._channels[channel] -= 1
             return
         del self._channels[channel]

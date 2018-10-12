@@ -29,8 +29,11 @@ class Client(Singleton):
                 [self._addr, BOT_API_PATH, name, action.value])
         if action in [Action.LOAD, Action.UNLOAD]:
             # POST request
-            r = self._client.fetch(url, method = 'POST', body = '')
-            resp = Response.from_dict(json.loads(r.body))
+            try:
+                r = self._client.fetch(url, method = 'POST', body = '')
+                resp = Response.from_dict(json.loads(r.body))
+            except (ConnectionRefusedError, httpclient.HTTPError) as e:
+                resp = Response(error = Error.INTERNAL, message = str(e))
             self.print_response(resp)
             return resp.error == Error.OK
         elif action in []:

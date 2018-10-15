@@ -13,6 +13,7 @@ from ..common.action import Action
 from ..common.event import Event
 from ..utils.singleton import Singleton
 from ..utils import current_func_name
+from ..utils import override
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -159,7 +160,39 @@ class Manager(Event, Singleton):
 
 
     def check_bot(self, bot: Bot):
-        pass
+        if not isinstance(bot, Bot):
+            raise CheckError('Not an instance of bot', bot = bot)
+
+        can_override = []
+        cant_override = []
+        for v in dir(Bot):
+            attr = getattr(Bot, v)
+            if not callable(attr):
+                continue
+            if not override.is_overridable(attr):
+                cant_override.append(v)
+            elif not override.is_overridden(attr):
+                can_override.append(v)
+
+        for v in cant_override:
+            attr = getattr(bot, v)
+            if attr == None:
+                raise CheckError('Attribute %s should not be None' % repr(v),
+                        bot = bot)
+            if override.is_overridden(attr):
+                raise CheckError('Attribute %s should not be overridden' %
+                        repr(v), bot = bot)
+
+        overridden = []
+        for v in can_override:
+            attr = getattr(bot, v)
+            if attr == None:
+                raise CheckError('Attribute %s should not be None' % repr(v),
+                        bot = bot)
+            if override.is_overridden(attr):
+                overridden.append(v)
+
+        logger.info('Bot %s overrides: %s', repr(bot._name), overridden)
 
     """
     Implement ..common.event.Event

@@ -97,12 +97,13 @@ class Manager(Event, Singleton):
         bot = self.get_bot(name)
         if bot:
             raise LoadError('Already loaded', bot = bot)
+        self._cur_name = name
+
+        if name in sys.modules:
+            raise LoadError('%s can not be used as name of bot' % repr(name),
+                    name = name)
         try:
-            self._cur_name = name
-            if name in sys.modules:
-                importlib.reload(sys.modules[name])
-            else:
-                importlib.import_module(name, None)
+            importlib.import_module(name, None)
         except Exception as e:
             raise LoadError('Failed to import module: %s' % e, name = name)
 
@@ -133,8 +134,9 @@ class Manager(Event, Singleton):
             self._action.part(t)
 
         del self._bots[name]
+        del sys.modules[name]
 
-        logger.info('Bot "%s" is unloaded', bot._name)
+        logger.info('Bot %s is unloaded', repr(bot._name))
 
 
     def load_bots(self):

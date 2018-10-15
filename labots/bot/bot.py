@@ -5,19 +5,11 @@ from typing import List, Dict, Any
 from ..common.message import Message
 from ..common.event import Event
 from ..common.action import Action
+from ..utils import override
 
 # Initialize logging
 logger = logging.getLogger(__name__)
 # logger.setLevel(logging.INFO)
-
-def is_covered(func) -> bool:
-    return hasattr(func, '_uncoverd')
-
-def uncovered(func):
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-    wrapper._uncoverd = None
-    return wrapper
 
 class Bot(Event):
     _name = None
@@ -28,7 +20,7 @@ class Bot(Event):
     logger: logging.Logger = None
     action: Action = None
 
-    @uncovered
+    @override.non_overridable
     def __init__(self,
             name: str = '<unknown>',
             action: Action = None,
@@ -42,11 +34,11 @@ class Bot(Event):
     Bot phase callbacks
     """
 
-    @uncovered
+    @override.non_overridden
     def init(self):
         pass
 
-    @uncovered
+    @override.non_overridden
     def finalize(self):
         pass
 
@@ -54,26 +46,26 @@ class Bot(Event):
     Implement ..common.event.Event
     """
 
-    @uncovered
+    @override.non_overridden
     def on_raw(self, msg: Message):
         pass
 
-    @uncovered
+    @override.non_overridden
     def on_connect(self):
         pass
 
-    @uncovered
+    @override.non_overridden
     def on_message(self, origin: str, target: str, msg: str):
         pass
 
-    @uncovered
+    @override.non_overridden
     def on_channel_message(self, origin: str, channel: str, msg: str):
         pass
 
     """
     Utils functions
     """
-    @uncovered
+    @override.non_overridable
     def is_in_targets(self, target: str) -> bool:
         for t in self.targets:
             if isinstance(t, str):

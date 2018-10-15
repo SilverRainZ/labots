@@ -20,6 +20,9 @@ class PydleClient(pydle.Client):
     ..common.event.Event.
     """
 
+    RECONNECT_MAX_ATTEMPTS = 100
+    RECONNECT_DELAYS = [d * 5 for d in range(0, RECONNECT_MAX_ATTEMPTS)]
+
     _event: Event
 
     def __init__(self, event: Event, *args, **kwargs):

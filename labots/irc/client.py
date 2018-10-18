@@ -10,7 +10,6 @@ from ..common.action import Action
 from ..utils.singleton import Singleton
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 class Client(Action, Singleton):
     # Config

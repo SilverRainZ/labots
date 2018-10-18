@@ -9,7 +9,6 @@ from ..utils import override
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.INFO)
 
 class Bot(Event):
     _name = None

@@ -3,6 +3,11 @@
 #   - optional: This configuration is optional
 #   - default: This configuration has a default value if it is not set
 
+log:
+    # level: info       # [str,default] One of "debug, "info", "warning" and "error"
+    # output: stdout    # [str,default] One of "stdout", "stderr" and path of log file
+    # color: true       # [bool,default] Whether output colorful log
+
 irc:
     host: localhost     # [str,required] IRC server hostname, can be an IP
     port: 6667          # [int,required] IRC server port

@@ -7,7 +7,6 @@ from typing import List, Dict, Any
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 class Item():
     """ """

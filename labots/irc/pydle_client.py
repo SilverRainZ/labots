@@ -6,7 +6,6 @@ from ..common.message import Message
 from ..common.event import Event
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 def pydle_message_to_message(msg) -> Message:
     _msg = Message()

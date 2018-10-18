@@ -46,7 +46,8 @@ class Formatter(logging.Formatter):
         record.asctime = time.strftime("%m-%d %H:%M:%S", self.converter(record.created))
 
         prefix = '[%(levelname)4s %(asctime)s %(name)6s]' % record.__dict__
-        prefix = name2color.get(record.levelname) % prefix
+        if self._color:
+            prefix = name2color.get(record.levelname) % prefix
         formatted = prefix + ' ' + record.message
 
         if record.exc_info and not record.exc_text:

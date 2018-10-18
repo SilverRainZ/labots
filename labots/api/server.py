@@ -11,7 +11,6 @@ from ..utils import current_func_name
 from ..utils.singleton import Singleton
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 """
 Server provides:

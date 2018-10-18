@@ -23,6 +23,15 @@ def load_config(raw: str) -> Config:
     d = yaml.load(raw)
     try:
         checker.check(d, [
+            checker.Item(key = ['log', 'level'],
+                checkers = [checker.is_str, checker.is_not_empty_str],
+                default = 'info'),
+            checker.Item(key = ['log', 'output'],
+                checkers = [checker.is_str, checker.is_not_empty_str],
+                default = 'stderr'),
+            checker.Item(key = ['log', 'color'],
+                checkers = [checker.is_bool],
+                default = True),
             checker.Item(key = ['irc', 'host'],
                 checkers = [checker.is_str, checker.is_not_empty_str],
                 required = True),

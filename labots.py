@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- encoding: UTF-8 -*-
 
+import logging
 import sys
 import argparse
-import logging
 from tornado.ioloop import IOLoop
 
 from labots.config import config
@@ -16,7 +16,37 @@ from labots.common import meta
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+
+def setup_logging(cfg: config.Config = None):
+    lv = logging.ERROR
+    hdr = logging.StreamHandler(sys.stdout)
+    hdr.setFormatter(clogger.Formatter(True))
+
+    if cfg:
+        name2level = {
+                'debug': logging.DEBUG,
+                'info': logging.INFO,
+                'warning': logging.WARNING,
+                'error': logging.ERROR,
+                }
+        name2output = {
+                'stdout': sys.stdout,
+                'stderr': sys.stderr,
+                }
+
+        if cfg.log.level in name2level:
+            lv = name2level[cfg.log.level]
+
+        if cfg.log.output in name2output:
+            hdr = logging.StreamHandler(name2output[cfg.log.output])
+        else:
+            hdr = logging.FileHandler(cfg.log.output)
+
+        hdr.setFormatter(clogger.Formatter(cfg.log.color))
+
+    logging.basicConfig(
+            level = lv,
+            handlers = [hdr])
 
 def labots_server(args: argparse.Namespace):
     with open(args.config, 'r') as f:
@@ -25,6 +55,8 @@ def labots_server(args: argparse.Namespace):
         except (KeyError, ValueError) as e:
             logger.error(e)
             return
+
+    setup_logging(cfg)
 
     irc = client.Client(
             host = cfg.irc.host,
@@ -54,6 +86,8 @@ def labots_server(args: argparse.Namespace):
         irc.disconnect()
 
 def labots_client(args: argparse.Namespace):
+    setup_logging()
+
     def callback():
         api = apiclient.Client(addr = args.addr)
         ret = api.request(args.bot, args.action)
@@ -110,13 +144,4 @@ def main():
 
 
 if __name__ == '__main__':
-    filelog = logging.FileHandler(meta.name + '.log')
-    filelog.setFormatter(clogger.Formatter(False))
-    syslog = logging.StreamHandler()
-    syslog.setFormatter(clogger.Formatter(True))
-
-    logging.basicConfig(
-            level = logging.INFO,
-            handlers = [filelog, syslog],
-            )
     main()

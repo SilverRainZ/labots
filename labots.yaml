@@ -1,0 +1,26 @@
+# Glossary:
+#   - required: This configuration is required
+#   - optional: This configuration is optional
+#   - default: This configuration has a default value if it is not set
+
+log:
+    # level: info       # [str,default] One of "debug, "info", "warning" and "error"
+    # output: stdout    # [str,default] One of "stdout", "stderr" and path of log file
+    # color: true       # [bool,default] Whether output colorful log
+
+irc:
+    host: localhost     # [str,required] IRC server hostname, can be an IP
+    port: 6667          # [int,required] IRC server port
+    # tls: false        # [bool,default] Whether use TLS connection
+    # tls_verify: true  # [bool,default] Whether verify TLS certificate 
+    # nickname: labots  # [str,default] IRC bot nickname
+    # username:         # [str,optional]
+    # realname:         # [str,optional]
+    # password:         # [str,optional]
+
+manager:
+    path: ./bots                # [str,required] Path of bot scripts directory 
+    config: ./bots/bots.yaml    # [str,optional] Path of bot config file
+
+server:
+    # listen: http://localhost:30553    # [str,default] API server listen address

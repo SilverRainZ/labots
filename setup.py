@@ -20,6 +20,6 @@ setup(name = meta.name,
         license = meta.license,
         packages = ['labots'],
         scripts = ['labots.py'],
-        install_requires=['pyyaml', 'tornado', 'pydle'],
+        install_requires=['pyyaml', 'tornado', 'pydle', 'sqlitedict'],
         cmdclass = { 'install_scripts': labots_install_scripts },
         zip_safe = False)

@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 class Manager(Event, Singleton):
     _path: str
     _config_path: str
+    _storage_db_path: str
+    _cache_db_path: str
     _bots: Dict[str, Bot] = {}
     _action: Action = None
     _cur_name: str = None # Name of currently registering bot
@@ -35,11 +37,18 @@ class Manager(Event, Singleton):
             raise TypeError()
         self._action = action
 
-    def __init__(self, path: str = None, config_path: str = None):
+    def __init__(self,
+            path: str = None,
+            config_path: str = None,
+            storage_db_path: str = None,
+            cache_db_path: str = None):
         self._path = path
         self._config_path = config_path
         # Add path to system import path
         sys.path.append(path)
+
+        self._storage_db_path = storage_db_path
+        self._cache_db_path = cache_db_path
 
     """
     Bot management functions
@@ -72,7 +81,8 @@ class Manager(Event, Singleton):
                 name = self._cur_name,
                 action = self.action,
                 config = cfg,
-                )
+                storage_db_path = self._storage_db_path,
+                cache_db_path = self._cache_db_path)
 
         try:
             self.check_bot(bot)

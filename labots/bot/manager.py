@@ -75,7 +75,7 @@ class Manager(Event, Singleton):
             cfg = cfgs[self._cur_name]
             logger.info('Configuration of bot %s is loaded', repr(self._cur_name))
         else:
-            cfg = None
+            cfg = {}
 
         bot = bot_class(
                 name = self._cur_name,

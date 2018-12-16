@@ -19,7 +19,7 @@ from ..utils import override
 logger = logging.getLogger(__name__)
 
 class Manager(Event, Singleton):
-    _path: str
+    _bots_path: str
     _config_path: str
     _storage_db_path: str
     _cache_db_path: str
@@ -38,14 +38,14 @@ class Manager(Event, Singleton):
         self._action = action
 
     def __init__(self,
-            path: str = None,
+            bots_path: str = None,
             config_path: str = None,
             storage_db_path: str = None,
             cache_db_path: str = None):
-        self._path = path
+        self._bots_path = bots_path
         self._config_path = config_path
         # Add path to system import path
-        sys.path.append(path)
+        sys.path.append(bots_path)
 
         self._storage_db_path = storage_db_path
         self._cache_db_path = cache_db_path
@@ -149,8 +149,8 @@ class Manager(Event, Singleton):
 
 
     def load_bots(self):
-        logger.info('Loading bots from path %s ...', repr(self._path))
-        for f in os.listdir(self._path):
+        logger.info('Loading bots from path %s ...', repr(self._bots_path))
+        for f in os.listdir(self._bots_path):
             name = self._file_name_to_module_name(f)
             if not name:
                 continue

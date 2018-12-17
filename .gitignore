@@ -89,3 +89,6 @@ ENV/
 .ropeproject
 
 *.log
+
+# Sqlite database
+*.db

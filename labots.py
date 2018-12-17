@@ -67,8 +67,10 @@ def labots_server(args: argparse.Namespace):
             username = cfg.irc.username,
             realname = cfg.irc.realname)
     mgr = manager.Manager(
-            path = cfg.manager.path,
-            config_path = cfg.manager.config)
+            bots_path = cfg.manager.bots,
+            config_path = cfg.manager.config,
+            storage_db_path = './storage.db',
+            cache_db_path = './cache.db')
     api = apiserver.Server(
             listen = cfg.server.listen,
             manager = mgr)

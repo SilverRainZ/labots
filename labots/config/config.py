@@ -1,6 +1,5 @@
 import logging
 import yaml
-import pprint
 from typing import Dict
 
 from labots.config import checker
@@ -58,11 +57,17 @@ def load_config(raw: str) -> Config:
                 checkers = [checker.is_str],
                 default = ''),
 
-            checker.Item(key = ['manager', 'path'],
+            checker.Item(key = ['manager', 'bots'],
                 checkers = [checker.is_str],
                 required = True),
             checker.Item(key = ['manager', 'config'],
                 checkers = [checker.is_str]),
+            checker.Item(key = ['manager', 'storage'],
+                checkers = [checker.is_str],
+                default = './storage.db'),
+            checker.Item(key = ['manager', 'cache'],
+                checkers = [checker.is_str],
+                default = './cache.db'),
 
             checker.Item(key = ['server', 'listen'],
                 checkers = [checker.is_str],

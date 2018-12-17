@@ -19,8 +19,10 @@ from ..utils import override
 logger = logging.getLogger(__name__)
 
 class Manager(Event, Singleton):
-    _path: str
+    _bots_path: str
     _config_path: str
+    _storage_db_path: str
+    _cache_db_path: str
     _bots: Dict[str, Bot] = {}
     _action: Action = None
     _cur_name: str = None # Name of currently registering bot
@@ -35,11 +37,18 @@ class Manager(Event, Singleton):
             raise TypeError()
         self._action = action
 
-    def __init__(self, path: str = None, config_path: str = None):
-        self._path = path
+    def __init__(self,
+            bots_path: str = None,
+            config_path: str = None,
+            storage_db_path: str = None,
+            cache_db_path: str = None):
+        self._bots_path = bots_path
         self._config_path = config_path
         # Add path to system import path
-        sys.path.append(path)
+        sys.path.append(bots_path)
+
+        self._storage_db_path = storage_db_path
+        self._cache_db_path = cache_db_path
 
     """
     Bot management functions
@@ -66,13 +75,14 @@ class Manager(Event, Singleton):
             cfg = cfgs[self._cur_name]
             logger.info('Configuration of bot %s is loaded', repr(self._cur_name))
         else:
-            cfg = None
+            cfg = {}
 
         bot = bot_class(
                 name = self._cur_name,
                 action = self.action,
                 config = cfg,
-                )
+                storage_db_path = self._storage_db_path,
+                cache_db_path = self._cache_db_path)
 
         try:
             self.check_bot(bot)
@@ -139,8 +149,8 @@ class Manager(Event, Singleton):
 
 
     def load_bots(self):
-        logger.info('Loading bots from path %s ...', repr(self._path))
-        for f in os.listdir(self._path):
+        logger.info('Loading bots from path %s ...', repr(self._bots_path))
+        for f in os.listdir(self._bots_path):
             name = self._file_name_to_module_name(f)
             if not name:
                 continue

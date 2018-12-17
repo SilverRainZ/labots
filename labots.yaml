@@ -12,15 +12,17 @@ irc:
     host: localhost     # [str,required] IRC server hostname, can be an IP
     port: 6667          # [int,required] IRC server port
     # tls: false        # [bool,default] Whether use TLS connection
-    # tls_verify: true  # [bool,default] Whether verify TLS certificate 
+    # tls_verify: true  # [bool,default] Whether verify TLS certificate
     # nickname: labots  # [str,default] IRC bot nickname
     # username:         # [str,optional]
     # realname:         # [str,optional]
     # password:         # [str,optional]
 
 manager:
-    path: ./bots                # [str,required] Path of bot scripts directory 
+    bots: ./bots                # [str,required] Path of bot scripts directory
     config: ./bots/bots.yaml    # [str,optional] Path of bot config file
+    # storage: ./storage.db     # [str,default] Path of bot storage database file
+    # cache: ./cache.db         # [str,default] Path of bot cache database file
 
 server:
     # listen: http://localhost:30553    # [str,default] API server listen address

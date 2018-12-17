@@ -1,6 +1,7 @@
 # -*- encoding: UTF-8 -*-
 import logging
 from typing import List, Dict, Any
+from sqlitedict import SqliteDict
 
 from ..common.message import Message
 from ..common.event import Event
@@ -18,16 +19,31 @@ class Bot(Event):
     allow_reload: bool = True
     logger: logging.Logger = None
     action: Action = None
+    storage: SqliteDict = None
+    cache: SqliteDict = None
 
     @override.non_overridable
     def __init__(self,
             name: str = '<unknown>',
             action: Action = None,
-            config: Dict = {}):
+            config: Dict = {},
+            storage_db_path: str = None,
+            cache_db_path: str = None):
         self._name = name
         self.logger = logging.getLogger(__name__ + ':' + name)
         self.action = action
         self.config = config
+        self.storage = SqliteDict(storage_db_path,
+                    tablename = name,
+                    autocommit = True)
+        self.cache = SqliteDict(cache_db_path,
+                    tablename = name,
+                    autocommit = True)
+
+    @override.non_overridable
+    def __del__(self):
+        self.storage.close()
+        self.cache.close()
 
     """
     Bot phase callbacks

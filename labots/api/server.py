@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 from .common import BOT_API_PATH, Action, Response, Error
 from ..bot.manager import Manager
-from ..bot.error import LoadError, RegisterError, UnloadError
+from ..bot.error import LoadError, UnloadError
 from ..utils import current_func_name
 from ..utils.singleton import Singleton
 
@@ -18,7 +18,9 @@ Server provides:
 - /bots/<bot_name>/load
 - /bots/<bot_name>/unload
 - /bots/<bot_name>/reaload
-- ....
+- /bots/<bot_name>/storage
+- /bots/<bot_name>/cache
+- ...
 
 """
 
@@ -35,20 +37,33 @@ class BotHandler(tornado.web.RequestHandler):
             return
         action = Action(action)
 
-        if action in [Action.LOAD, Action.UNLOAD]:
+        if action == Action.STORAGE:
+            b = self._manager.get_bot(name)
+            if b:
+                d = {}
+                d.update(b.storage)
+                self.write(Response(error = Error.OK, data = d).to_dict())
+            else:
+                self.write(Response(error = Error.NOT_FOUND).to_dict())
+            return
+        elif action == Action.CACHE:
+            b = self._manager.get_bot(name)
+            if b:
+                d = {}
+                d.update(b.cache)
+                self.write(Response(error = Error.OK, data = d).to_dict())
+            else:
+                self.write(Response(error = Error.NOT_FOUND).to_dict())
+            return
+        else:
             self.set_status(HTTPStatus.METHOD_NOT_ALLOWED)
             self.write(Response(error = Error.NOT_ALLOWED,
                 message = 'Action %s is not allowed for method %s' %(
                     repr(action.value), repr(current_func_name()))).to_dict())
             return
-        else:
-            self.set_status(HTTPStatus.INTERNAL_SERVER_ERROR)
-            self.write(Response(error = Error.INTERNAL).to_dict())
-            return
 
-        # Fallback
-        self.write(Response(error = Error.OK).to_dict())
-        return
+        # Should not reach
+        self.write(Response(error = Error.INTERNAL).to_dict())
 
     def post(self, name: str, action: str):
         if not action in [item.value for item in Action]:
@@ -62,27 +77,27 @@ class BotHandler(tornado.web.RequestHandler):
                 self._manager.load_bot(name)
             except LoadError as e:
                 self.write(Response(error = Error.LOAD, message = str(e)).to_dict())
-                return
+            else:
+                self.write(Response(error = Error.OK).to_dict())
+            return
         elif action == Action.UNLOAD:
             try:
                 self._manager.unload_bot(name)
             except UnloadError as e:
                 self.write(Response(error = Error.UNLOAD, message = str(e)).to_dict())
-                return
-        elif action in []:
+            else:
+                self.write(Response(error = Error.OK).to_dict())
+            return
+        else:
             self.set_status(HTTPStatus.METHOD_NOT_ALLOWED)
-            self.write(Response(error = Error.NOT_FOUND,
+            self.write(Response(error = Error.NOT_ALLOWED,
                 message = 'Action %s is not allowed for method %s' %(
                     repr(action.value), repr(current_func_name()))).to_dict())
             return
-        else:
-            self.set_status(HTTPStatus.INTERNAL_SERVER_ERROR)
-            self.write(Response(error = Error.INTERNAL).to_dict())
-            return
 
-        # Fallback
-        self.write(Response(error = Error.OK).to_dict())
-        return
+        # Should not reach
+        self.write(Response(error = Error.INTERNAL).to_dict())
+
 
 class Server(tornado.web.Application, Singleton):
     _listen: str
@@ -93,7 +108,7 @@ class Server(tornado.web.Application, Singleton):
             listen: str = None,
             manager: Manager = None):
         hdrs = [
-                (r'/bots/(.+)/(.+)', BotHandler),
+                (BOT_API_PATH + '/(.+)/(.+)', BotHandler),
                 ]
         super().__init__(hdrs)
 

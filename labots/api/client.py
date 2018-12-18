@@ -1,10 +1,8 @@
 import logging
 import json
 from tornado import httpclient
-from urllib.parse import urljoin
 
 from .common import BOT_API_PATH, Action, Response, Error
-from .common import Error, Response
 from ..utils.singleton import Singleton
 
 logger = logging.getLogger(__name__)
@@ -35,15 +33,19 @@ class Client(Singleton):
                 resp = Response(error = Error.INTERNAL, message = str(e))
             self.print_response(resp)
             return resp.error == Error.OK
-        elif action in []:
+        elif action in [Action.STORAGE, Action.CACHE]:
             # GET request
-            r = self._client.fetch(url, method = 'GET')
-            resp = Response.from_dict(json.loads(r.body))
+            try:
+                r = self._client.fetch(url, method = 'GET')
+                resp = Response.from_dict(json.loads(r.body))
+            except (ConnectionRefusedError, httpclient.HTTPError) as e:
+                resp = Response(error = Error.INTERNAL, message = str(e))
             self.print_response(resp)
             return resp.error == Error.OK
-        else:
-            self.print_response(Response(error = Error.INTERNAL))
-            return False
+
+        # Should not reach
+        self.print_response(Response(error = Error.INTERNAL))
+        return False
 
     def close(self):
         self._client.close()
@@ -51,7 +53,8 @@ class Client(Singleton):
     @staticmethod
     def print_response(resp: Response):
         if resp.error != Error.OK:
-            logger.error('Server returns error: %s, message: %s',
-                    resp.error.value, resp.message)
+            logger.error('Server returns error: %s, message: %s, data: %s',
+                    resp.error.value, resp.message, resp.data)
         else:
-            logger.info('Server returns OK, message: %s', resp.message)
+            logger.info('Server returns OK, message: %s, data: %s',
+                    resp.message, resp.data)

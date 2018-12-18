@@ -63,9 +63,11 @@ def labots_server(args: argparse.Namespace):
             port = cfg.irc.port,
             tls = cfg.irc.tls,
             tls_verify = cfg.irc.tls_verify,
+            server_password = cfg.irc.server_password,
             nickname = cfg.irc.nickname,
             username = cfg.irc.username,
-            realname = cfg.irc.realname)
+            realname = cfg.irc.realname,
+            user_password = cfg.irc.user_password)
     mgr = manager.Manager(
             bots_path = cfg.manager.bots,
             config_path = cfg.manager.config,

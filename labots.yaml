@@ -13,10 +13,11 @@ irc:
     port: 6667          # [int,required] IRC server port
     # tls: false        # [bool,default] Whether use TLS connection
     # tls_verify: true  # [bool,default] Whether verify TLS certificate
+    # server_password:  # [str,optional] IRC server password
     # nickname: labots  # [str,default] IRC bot nickname
     # username:         # [str,optional]
     # realname:         # [str,optional]
-    # password:         # [str,optional]
+    # user_password:    # [str,optional] IRC bot user password
 
 manager:
     bots: ./bots                # [str,required] Path of bot scripts directory

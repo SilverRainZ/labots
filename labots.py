@@ -21,7 +21,7 @@ from labots.cache import Cache
 logger = logging.getLogger(__name__)
 
 def setup_logging(cfg: config.Config = None):
-    lv = logging.ERROR
+    lv = logging.INFO
     hdr = logging.StreamHandler(sys.stdout)
     hdr.setFormatter(clogger.Formatter(True))
 

@@ -11,6 +11,7 @@ from labots.irc import client
 from labots.bot import manager
 from labots.api import server as apiserver
 from labots.api import client as apiclient
+from labots.api import common as apicommon
 from labots.utils import clogger
 from labots.common import meta
 from labots.storage import Storage
@@ -135,7 +136,7 @@ def main():
             help = 'specify the address that the server listens on')
     cliparser.add_argument('action',
             metavar = 'ACTION',
-            type = str,
+            choices = [act.value for act in apicommon.Action],
             help = 'specify the action to perform')
     cliparser.add_argument('bot',
             metavar = 'BOT',

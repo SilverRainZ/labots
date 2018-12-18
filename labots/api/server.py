@@ -88,6 +88,17 @@ class BotHandler(tornado.web.RequestHandler):
             else:
                 self.write(Response(error = Error.OK).to_dict())
             return
+        elif action == Action.RELOAD:
+            try:
+                self._manager.unload_bot(name)
+                self._manager.load_bot(name)
+            except UnloadError as e:
+                self.write(Response(error = Error.UNLOAD, message = str(e)).to_dict())
+            except LoadError as e:
+                self.write(Response(error = Error.LOAD, message = str(e)).to_dict())
+            else:
+                self.write(Response(error = Error.OK).to_dict())
+            return
         else:
             self.set_status(HTTPStatus.METHOD_NOT_ALLOWED)
             self.write(Response(error = Error.NOT_ALLOWED,

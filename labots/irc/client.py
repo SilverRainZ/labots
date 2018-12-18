@@ -109,7 +109,11 @@ class Client(Action, Singleton):
         self._channel_passwords[channel] = password
 
         if self._client.connected:
-            self._client.join(channel, password = password)
+            try:
+                self._client.join(channel, password = password)
+            except pydle.client.AlreadyInChannel:
+                # Just ignore it
+                pass
 
 
     def part(self, channel: str, reason: str = None):
@@ -121,7 +125,11 @@ class Client(Action, Singleton):
         del self._channel_passwords[channel]
 
         if self._client.connected:
-            self._client.part(channel, message = reason)
+            try:
+                self._client.part(channel, message = reason)
+            except pydle.client.NotInChannel:
+                # Just ignore it
+                pass
 
     def is_channel(self, target: str) -> bool:
         return self._client.is_channel(target)

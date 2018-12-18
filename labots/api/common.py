@@ -6,6 +6,7 @@ BOT_API_PATH = '/bots'
 class Action(Enum):
     LOAD = 'load'
     UNLOAD = 'unload'
+    RELOAD = 'reload'
     STORAGE = 'storage'
     CACHE = 'cache'
 

@@ -24,7 +24,7 @@ class Client(Singleton):
         # Join URL paths
         url = '/'.join(s.strip('/') for s in
                 [self._addr, BOT_API_PATH, name, action.value])
-        if action in [Action.LOAD, Action.UNLOAD]:
+        if action in [Action.LOAD, Action.UNLOAD, Action.RELOAD]:
             # POST request
             try:
                 r = self._client.fetch(url, method = 'POST', body = '')
@@ -40,6 +40,10 @@ class Client(Singleton):
                 resp = Response.from_dict(json.loads(r.body))
             except (ConnectionRefusedError, httpclient.HTTPError) as e:
                 resp = Response(error = Error.INTERNAL, message = str(e))
+            self.print_response(resp)
+            return resp.error == Error.OK
+        else:
+            resp = Response(error = Error.NOT_ALLOWED)
             self.print_response(resp)
             return resp.error == Error.OK
 

@@ -13,6 +13,8 @@ from labots.api import server as apiserver
 from labots.api import client as apiclient
 from labots.utils import clogger
 from labots.common import meta
+from labots.storage import Storage
+from labots.cache import Cache
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -68,11 +70,13 @@ def labots_server(args: argparse.Namespace):
             username = cfg.irc.username,
             realname = cfg.irc.realname,
             user_password = cfg.irc.user_password)
+    storage = Storage(cfg.storage.db)
+    cache = Cache(cfg.cache.db)
     mgr = manager.Manager(
             bots_path = cfg.manager.bots,
             config_path = cfg.manager.config,
-            storage_db_path = './storage.db',
-            cache_db_path = './cache.db')
+            storage = storage,
+            cache = cache)
     api = apiserver.Server(
             listen = cfg.server.listen,
             manager = mgr)

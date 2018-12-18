@@ -22,8 +22,12 @@ irc:
 manager:
     bots: ./bots                # [str,required] Path of bot scripts directory
     config: ./bots/bots.yaml    # [str,optional] Path of bot config file
-    # storage: ./storage.db     # [str,default] Path of bot storage database file
-    # cache: ./cache.db         # [str,default] Path of bot cache database file
 
 server:
     # listen: http://localhost:30553    # [str,default] API server listen address
+
+storage:
+    # db: ./storage.db  # [str,default] Path of bot storage database file
+
+cache:
+    # db: ./cache.db    # [str,default] Path of bot cache database file

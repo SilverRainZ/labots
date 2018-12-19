@@ -11,14 +11,17 @@ from labots.irc import client
 from labots.bot import manager
 from labots.api import server as apiserver
 from labots.api import client as apiclient
+from labots.api import common as apicommon
 from labots.utils import clogger
 from labots.common import meta
+from labots.storage import Storage
+from labots.cache import Cache
 
 # Initialize logging
 logger = logging.getLogger(__name__)
 
 def setup_logging(cfg: config.Config = None):
-    lv = logging.ERROR
+    lv = logging.INFO
     hdr = logging.StreamHandler(sys.stdout)
     hdr.setFormatter(clogger.Formatter(True))
 
@@ -63,14 +66,18 @@ def labots_server(args: argparse.Namespace):
             port = cfg.irc.port,
             tls = cfg.irc.tls,
             tls_verify = cfg.irc.tls_verify,
+            server_password = cfg.irc.server_password,
             nickname = cfg.irc.nickname,
             username = cfg.irc.username,
-            realname = cfg.irc.realname)
+            realname = cfg.irc.realname,
+            user_password = cfg.irc.user_password)
+    storage = Storage(cfg.storage.db)
+    cache = Cache(cfg.cache.db)
     mgr = manager.Manager(
             bots_path = cfg.manager.bots,
             config_path = cfg.manager.config,
-            storage_db_path = './storage.db',
-            cache_db_path = './cache.db')
+            storage = storage,
+            cache = cache)
     api = apiserver.Server(
             listen = cfg.server.listen,
             manager = mgr)
@@ -129,7 +136,7 @@ def main():
             help = 'specify the address that the server listens on')
     cliparser.add_argument('action',
             metavar = 'ACTION',
-            type = str,
+            choices = [act.value for act in apicommon.Action],
             help = 'specify the action to perform')
     cliparser.add_argument('bot',
             metavar = 'BOT',

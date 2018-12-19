@@ -12,16 +12,19 @@ from ..utils.singleton import Singleton
 logger = logging.getLogger(__name__)
 
 class Client(Action, Singleton):
-    # Config
+    # Server config
     _host: str
     _port: int
     _tls: bool
     _tls_verify: bool
+    _server_password: str
+
+    # User config
     _nickname: str
     _username: str
     _hostname: str
     _realname: str
-    _password: str
+    _user_password: str
 
     _event: Event = None
     _client: PydleClient = None
@@ -33,21 +36,24 @@ class Client(Action, Singleton):
             port: int = None,
             tls: bool = None,
             tls_verify: bool = None,
+            server_password: str = None,
             nickname: str = None,
             username: str = None,
             hostname: str = None,
             realname: str = None,
-            password: str = None):
+            user_password: str = None):
         super().__init__()
         self._host = host
         self._port = port
         self._tls = tls
         self._tls_verify = tls_verify
+        self._password = server_password
+
         self._nickname = nickname
         self._username = username
         self._hostname = hostname
         self._realname = realname
-        self._password = password
+        self._user_password = user_password
 
     @property
     def event(self) -> Event:
@@ -70,7 +76,8 @@ class Client(Action, Singleton):
                 nickname = self._nickname,
                 fallback_nicknames = [self._nickname + str(i) for i in range(1, 10)],
                 username = self._username,
-                realname = self._realname)
+                realname = self._realname,
+                )
         self._client.connect(
                 hostname = self._host,
                 port = self._port,
@@ -102,7 +109,11 @@ class Client(Action, Singleton):
         self._channel_passwords[channel] = password
 
         if self._client.connected:
-            self._client.join(channel, password = password)
+            try:
+                self._client.join(channel, password = password)
+            except pydle.client.AlreadyInChannel:
+                # Just ignore it
+                pass
 
 
     def part(self, channel: str, reason: str = None):
@@ -114,7 +125,11 @@ class Client(Action, Singleton):
         del self._channel_passwords[channel]
 
         if self._client.connected:
-            self._client.part(channel, message = reason)
+            try:
+                self._client.part(channel, message = reason)
+            except pydle.client.NotInChannel:
+                # Just ignore it
+                pass
 
     def is_channel(self, target: str) -> bool:
         return self._client.is_channel(target)
@@ -128,6 +143,9 @@ class Client(Action, Singleton):
     """ Hooks of ..common.event.Event """
 
     def _on_connect(self, next_callback):
+        # Do login if user password is specified
+        if self._user_password:
+            self._client.message('NickServ', 'IDENTIFY %s' % self._user_password)
         for channel in self._channels:
             self._client.join(channel, password = self._channel_passwords[channel])
         next_callback()

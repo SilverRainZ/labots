@@ -7,6 +7,8 @@ from ..common.message import Message
 from ..common.event import Event
 from ..common.action import Action
 from ..utils import override
+from ..storage import Storage
+from ..cache import Cache
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -27,18 +29,14 @@ class Bot(Event):
             name: str = '<unknown>',
             action: Action = None,
             config: Dict = {},
-            storage_db_path: str = None,
-            cache_db_path: str = None):
+            storage: Storage = None,
+            cache: Cache = None):
         self._name = name
         self.logger = logging.getLogger(__name__ + ':' + name)
         self.action = action
         self.config = config
-        self.storage = SqliteDict(storage_db_path,
-                    tablename = name,
-                    autocommit = True)
-        self.cache = SqliteDict(cache_db_path,
-                    tablename = name,
-                    autocommit = True)
+        self.storage = storage.open('bots.' + name)
+        self.cache = cache.open('bots.' + name)
 
     @override.non_overridable
     def __del__(self):

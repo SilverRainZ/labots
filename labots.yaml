@@ -13,16 +13,21 @@ irc:
     port: 6667          # [int,required] IRC server port
     # tls: false        # [bool,default] Whether use TLS connection
     # tls_verify: true  # [bool,default] Whether verify TLS certificate
+    # server_password:  # [str,optional] IRC server password
     # nickname: labots  # [str,default] IRC bot nickname
     # username:         # [str,optional]
     # realname:         # [str,optional]
-    # password:         # [str,optional]
+    # user_password:    # [str,optional] IRC bot user password
 
 manager:
     bots: ./bots                # [str,required] Path of bot scripts directory
     config: ./bots/bots.yaml    # [str,optional] Path of bot config file
-    # storage: ./storage.db     # [str,default] Path of bot storage database file
-    # cache: ./cache.db         # [str,default] Path of bot cache database file
 
 server:
     # listen: http://localhost:30553    # [str,default] API server listen address
+
+storage:
+    # db: ./storage.db  # [str,default] Path of bot storage database file
+
+cache:
+    # db: ./cache.db    # [str,default] Path of bot cache database file

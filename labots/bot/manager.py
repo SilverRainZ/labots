@@ -14,18 +14,21 @@ from ..common.event import Event
 from ..utils.singleton import Singleton
 from ..utils import current_func_name
 from ..utils import override
+from ..storage import Storage
+from ..cache import Cache
 
 # Initialize logging
 logger = logging.getLogger(__name__)
 
 class Manager(Event, Singleton):
     _bots_path: str
-    _config_path: str
-    _storage_db_path: str
     _cache_db_path: str
     _bots: Dict[str, Bot] = {}
     _action: Action = None
     _cur_name: str = None # Name of currently registering bot
+
+    _storage: Storage
+    _config: Cache
 
     @property
     def action(self) -> Action:
@@ -40,15 +43,15 @@ class Manager(Event, Singleton):
     def __init__(self,
             bots_path: str = None,
             config_path: str = None,
-            storage_db_path: str = None,
-            cache_db_path: str = None):
+            storage: Storage = None,
+            cache: Cache = None):
         self._bots_path = bots_path
         self._config_path = config_path
         # Add path to system import path
         sys.path.append(bots_path)
 
-        self._storage_db_path = storage_db_path
-        self._cache_db_path = cache_db_path
+        self._storage = storage
+        self._cache = cache
 
     """
     Bot management functions
@@ -81,8 +84,8 @@ class Manager(Event, Singleton):
                 name = self._cur_name,
                 action = self.action,
                 config = cfg,
-                storage_db_path = self._storage_db_path,
-                cache_db_path = self._cache_db_path)
+                storage = self._storage,
+                cache = self._cache)
 
         try:
             self.check_bot(bot)

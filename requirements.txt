@@ -1,3 +1,4 @@
+ircmessage==0.1.1
 pydle==0.8.4
 PyYAML==3.13
 sqlitedict==1.6.0

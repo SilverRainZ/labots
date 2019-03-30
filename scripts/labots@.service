@@ -1,0 +1,11 @@
+# /usr/lib/systemd/system/labots@.service
+[Unit]
+Description=LABots IRC bot framework Service
+After=network-online.target
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/labots server -c /etc/labots/%i.yaml
+
+[Install]
+WantedBy=multi-user.target

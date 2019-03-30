@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from distutils.command.install_scripts import install_scripts
 
 from labots.common import meta
@@ -18,7 +18,7 @@ setup(name = meta.name,
         author = meta.author,
         author_email = meta.author_email,
         license = meta.license,
-        packages = ['labots'],
+        packages = find_packages(),
         scripts = ['labots.py'],
         install_requires=['pyyaml', 'tornado', 'pydle', 'sqlitedict'],
         cmdclass = { 'install_scripts': labots_install_scripts },

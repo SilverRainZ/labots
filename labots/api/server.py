@@ -127,7 +127,7 @@ class Server(tornado.web.Application, Singleton):
         self._manager = manager
         self._server = tornado.httpserver.HTTPServer(self)
 
-    def start(self):
+    async def start(self):
         logger.info('Starting the API server, listening on %s ...', self._listen)
         url = urlparse(self._listen)
         if url.scheme in ['', 'http']:
@@ -135,6 +135,6 @@ class Server(tornado.web.Application, Singleton):
         else:
             raise NotImplementedError('Unsupported scheme %s' % repr(url.scheme))
 
-    def close(self):
+    async def stop(self):
         logger.info('Stopping the API server...')
         self._server.stop()

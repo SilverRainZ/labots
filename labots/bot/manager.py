@@ -105,7 +105,7 @@ class Manager(Event, Singleton):
             return self._bots[name]
         return None
 
-    def load_bot(self, name: str):
+    async def load_bot(self, name: str):
         bot = self.get_bot(name)
         if bot:
             raise LoadError('Already loaded', bot = bot)
@@ -126,12 +126,12 @@ class Manager(Event, Singleton):
 
         for _, bot in self._bots.items():
             for t in bot.targets:
-                self.action.join(t)
+                await self.action.join(t)
 
         logger.info('Bot %s is loaded', repr(name))
 
 
-    def unload_bot(self, name, force = False):
+    async def unload_bot(self, name, force = False):
         bot = self.get_bot(name)
         if not bot:
             raise UnloadError('Not loaded', name = name)
@@ -143,7 +143,7 @@ class Manager(Event, Singleton):
             raise UnloadError('Failed to finalize: %s' % e, bot = bot)
 
         for t in bot.targets:
-            self._action.part(t)
+            await self._action.part(t)
 
         del self._bots[name]
         del sys.modules[name]
@@ -151,24 +151,24 @@ class Manager(Event, Singleton):
         logger.info('Bot %s is unloaded', repr(bot._name))
 
 
-    def load_bots(self):
+    async def load_bots(self):
         logger.info('Loading bots from path %s ...', repr(self._bots_path))
         for f in os.listdir(self._bots_path):
             name = self._file_name_to_module_name(f)
             if not name:
                 continue
             try:
-                self.load_bot(name)
+                await self.load_bot(name)
             except (LoadError, CheckError) as e:
                 logger.error(e)
 
 
-    def unload_bots(self):
+    async def unload_bots(self):
         logger.info('Unloading all bots...')
         for name in [name for name, _ in self._bots.items()]:
             try:
                 # Froce unload
-                self.unload_bot(name, force = True)
+                await self.unload_bot(name, force = True)
             except UnloadError as e:
                 logger.error(e)
 
@@ -212,7 +212,7 @@ class Manager(Event, Singleton):
     Implement ..common.event.Event
     """
 
-    def on_connect(self):
+    async def on_connect(self):
         for _, bot in self._bots.items():
             try:
                 bot.on_connect()
@@ -221,7 +221,7 @@ class Manager(Event, Singleton):
                     bot = bot,
                     event = current_func_name()))
 
-    def on_raw(self, msg: Message):
+    async def on_raw(self, msg: Message):
         for _, bot in self._bots.items():
             try:
                 bot.on_raw(msg)
@@ -230,7 +230,7 @@ class Manager(Event, Singleton):
                     bot = bot,
                     event = current_func_name()))
 
-    def on_message(self, origin: str, target: str, msg: str):
+    async def on_message(self, origin: str, target: str, msg: str):
         for _, bot in self._bots.items():
             if not bot.is_in_targets(target):
                 continue
@@ -241,7 +241,7 @@ class Manager(Event, Singleton):
                     bot = bot,
                     event = current_func_name()))
 
-    def on_channel_message(self, origin: str, channel: str, msg: str):
+    async def on_channel_message(self, origin: str, channel: str, msg: str):
         for _, bot in self._bots.items():
             if not bot.is_in_targets(channel):
                 continue

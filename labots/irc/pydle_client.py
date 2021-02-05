@@ -26,24 +26,24 @@ class PydleClient(pydle.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def on_connect(self):
-        super().on_connect()
-        self._event.on_connect()
+    async def on_connect(self):
+        await super().on_connect()
+        await self._event.on_connect()
 
-    def on_raw(self, msg):
-        super().on_raw(msg)
-        self._event.on_raw(pydle_message_to_message(msg))
+    async def on_raw(self, msg):
+        await super().on_raw(msg)
+        await self._event.on_raw(pydle_message_to_message(msg))
 
-    def on_message(self, target, by, message):
-        super().on_message(target, by, message)
-        self._event.on_message(by, target, message)
+    async def on_message(self, target, by, message):
+        await super().on_message(target, by, message)
+        await self._event.on_message(by, target, message)
 
-    def on_channel_message(self, target, by, message):
-        super().on_channel_message(target, by, message)
-        self._event.on_channel_message(by, target, message)
+    async def on_channel_message(self, target, by, message):
+        await super().on_channel_message(target, by, message)
+        await self._event.on_channel_message(by, target, message)
 
-    def on_join(self, channel, user):
-        super().on_join(channel, user)
+    async def on_join(self, channel, user):
+        await super().on_join(channel, user)
         logger.info('%s has joined %s', self.nickname, channel)
+        # FIXME: Why?
         # self._event.on_join(channel, user)
-

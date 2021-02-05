@@ -6,8 +6,8 @@ import sys
 import argparse
 import asyncio
 
-import tornado
 from tornado.ioloop import IOLoop
+from tornado.platform.asyncio import AsyncIOMainLoop
 
 from labots.config import config
 from labots.irc import client
@@ -81,23 +81,28 @@ def labots_server(args: argparse.Namespace):
             config_path = cfg.manager.config,
             storage = storage,
             cache = cache)
-    apisrv = apiserver.Server(
+    srv = apiserver.Server(
             listen = cfg.server.listen,
             manager = mgr)
     mgr.action = irc
     irc.event = mgr
 
-    tornado.platform.asyncio.AsyncIOMainLoop().install()
+    srv.start()
+
     ioloop = asyncio.get_event_loop()
+    asyncio.ensure_future(irc.connect(), loop = ioloop)
+    asyncio.ensure_future(mgr.load_bots(), loop = ioloop)
+    asyncio.ensure_future(srv.start(), loop = ioloop)
     try:
-        asyncio.ensure_future(irc.connect(), loop=ioloop)
-        mgr.load_bots()
-        apisrv.start()
         ioloop.run_forever()
     except KeyboardInterrupt:
-        mgr.unload_bots()
-        apisrv.close()
-        irc.disconnect()
+        async def exit_handler():
+            await srv.stop()
+            await mgr.unload_bots()
+            await irc.disconnect()
+        ioloop.run_until_complete(exit_handler())
+        ioloop.close()
+
 
 def labots_client(args: argparse.Namespace):
     setup_logging()

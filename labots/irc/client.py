@@ -2,6 +2,7 @@ import logging
 import pydle
 from typing import Dict
 from functools import partial
+import asyncio
 
 from .pydle_client import PydleClient
 from ..common.message import Message
@@ -79,14 +80,14 @@ class Client(Action, Singleton):
     async def connect(self):
         logger.info('Connecting to IRC server %s://%s:%d ...',
                 'ircs' if self._tls else 'irc', self._host, self._port)
-        return self._client.connect(hostname = self._host,
-                                   port = self._port,
-                                   tls = self._tls,
-                                   tls_verify = self._tls_verify)
+        await self._client.connect(hostname = self._host,
+                             port = self._port,
+                             tls = self._tls,
+                             tls_verify = self._tls_verify)
 
-    def disconnect(self):
+    async def disconnect(self):
         logger.info('Disconnecting from IRC server...')
-        self._client.disconnect()
+        await self._client.disconnect()
 
     """ Implement ..common.action.Action """
 
@@ -94,9 +95,9 @@ class Client(Action, Singleton):
         pass
 
     def message(self, target: str, msg: str):
-        self._client.message(target, msg)
+        asyncio.get_event_loop().create_task(self._client.message(target, msg))
 
-    def join(self, channel: str, password: str = None):
+    async def join(self, channel: str, password: str = None):
         # Increase reference count
         if channel in self._channels:
             self._channels[channel] += 1
@@ -106,13 +107,14 @@ class Client(Action, Singleton):
 
         if self._client.connected:
             try:
-                self._client.join(channel, password = password)
+                asyncio.get_event_loop().create_task(
+                    self._client.join(channel, password = password))
             except pydle.client.AlreadyInChannel:
                 # Just ignore it
                 pass
 
 
-    def part(self, channel: str, reason: str = None):
+    async def part(self, channel: str, reason: str = None):
         # Decrease reference count
         if self._channels[channel] > 1:
             self._channels[channel] -= 1
@@ -122,7 +124,7 @@ class Client(Action, Singleton):
 
         if self._client.connected:
             try:
-                self._client.part(channel, message = reason)
+                await self._client.part(channel, message = reason)
             except pydle.client.NotInChannel:
                 # Just ignore it
                 pass
@@ -138,10 +140,10 @@ class Client(Action, Singleton):
 
     """ Hooks of ..common.event.Event """
 
-    def _on_connect(self, next_callback):
+    async def _on_connect(self, next_callback):
         # Do login if user password is specified
         if self._user_password:
-            self._client.message('NickServ', 'IDENTIFY %s' % self._user_password)
+            await self._client.message('NickServ', 'IDENTIFY %s' % self._user_password)
         for channel in self._channels:
-            self._client.join(channel, password = self._channel_passwords[channel])
-        next_callback()
+            await self._client.join(channel, password = self._channel_passwords[channel])
+        await next_callback()

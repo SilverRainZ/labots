@@ -127,7 +127,7 @@ class Server(tornado.web.Application, Singleton):
         self._manager = manager
         self._server = tornado.httpserver.HTTPServer(self)
 
-    def serve(self):
+    def start(self):
         logger.info('Starting the API server, listening on %s ...', self._listen)
         url = urlparse(self._listen)
         if url.scheme in ['', 'http']:

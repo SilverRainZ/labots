@@ -1,6 +1,5 @@
 import logging
 import pydle
-from typing import Dict
 
 from ..common.message import Message
 from ..common.event import Event
@@ -24,9 +23,8 @@ class PydleClient(pydle.Client):
 
     _event: Event
 
-    def __init__(self, event: Event, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._event = event
 
     def on_connect(self):
         super().on_connect()

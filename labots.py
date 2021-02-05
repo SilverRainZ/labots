@@ -4,6 +4,9 @@
 import logging
 import sys
 import argparse
+import asyncio
+
+import tornado
 from tornado.ioloop import IOLoop
 
 from labots.config import config
@@ -78,29 +81,31 @@ def labots_server(args: argparse.Namespace):
             config_path = cfg.manager.config,
             storage = storage,
             cache = cache)
-    api = apiserver.Server(
+    apisrv = apiserver.Server(
             listen = cfg.server.listen,
             manager = mgr)
     mgr.action = irc
     irc.event = mgr
 
+    tornado.platform.asyncio.AsyncIOMainLoop().install()
+    ioloop = asyncio.get_event_loop()
     try:
-        irc.connect()
+        asyncio.ensure_future(irc.connect(), loop=ioloop)
         mgr.load_bots()
-        api.serve()
-        irc.handle()
+        apisrv.start()
+        ioloop.run_forever()
     except KeyboardInterrupt:
         mgr.unload_bots()
-        api.close()
+        apisrv.close()
         irc.disconnect()
 
 def labots_client(args: argparse.Namespace):
     setup_logging()
 
     def callback():
-        api = apiclient.Client(addr = args.addr)
-        ret = api.request(args.bot, args.action)
-        api.close()
+        apicli = apiclient.Client(addr = args.addr)
+        ret = apicli.request(args.bot, args.action)
+        apicli.close()
         IOLoop.instance().stop()
         sys.exit(0 if ret else 1)
 

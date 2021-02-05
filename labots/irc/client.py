@@ -55,6 +55,13 @@ class Client(Action, Singleton):
         self._realname = realname
         self._user_password = user_password
 
+        self._client = PydleClient(
+                nickname = self._nickname,
+                fallback_nicknames = [self._nickname + str(i) for i in range(1, 10)],
+                username = self._username,
+                realname = self._realname,
+                )
+
     @property
     def event(self) -> Event:
         return self._event
@@ -64,29 +71,18 @@ class Client(Action, Singleton):
         if not isinstance(event, Event):
             raise TypeError()
         self._event = event
+        self._client._event = event
         # Hook some callbacks in event
         event.on_connect = partial(self._on_connect, event.on_connect)
 
 
-    def connect(self):
+    async def connect(self):
         logger.info('Connecting to IRC server %s://%s:%d ...',
                 'ircs' if self._tls else 'irc', self._host, self._port)
-        self._client = PydleClient(
-                event = self._event,
-                nickname = self._nickname,
-                fallback_nicknames = [self._nickname + str(i) for i in range(1, 10)],
-                username = self._username,
-                realname = self._realname,
-                )
-        self._client.connect(
-                hostname = self._host,
-                port = self._port,
-                tls = self._tls,
-                tls_verify = self._tls_verify)
-
-    def handle(self):
-        logger.info('Starting handle messages from IRC server...')
-        self._client.handle_forever()
+        return self._client.connect(hostname = self._host,
+                                   port = self._port,
+                                   tls = self._tls,
+                                   tls_verify = self._tls_verify)
 
     def disconnect(self):
         logger.info('Disconnecting from IRC server...')

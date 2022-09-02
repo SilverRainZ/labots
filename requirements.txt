@@ -1,5 +1,0 @@
-ircmessage==0.1.1
-pydle==0.8.4
-PyYAML==5.1
-sqlitedict==1.6.0
-tornado==4.5.3

@@ -6,16 +6,16 @@ import sys
 import argparse
 from tornado.ioloop import IOLoop
 
-from labots.config import config
-from labots.irc import client
-from labots.bot import manager
-from labots.api import server as apiserver
-from labots.api import client as apiclient
-from labots.api import common as apicommon
-from labots.utils import clogger
-from labots.common import meta
-from labots.storage import Storage
-from labots.cache import Cache
+from .config import config
+from .irc import client
+from .bot import manager
+from .api import server as apiserver
+from .api import client as apiclient
+from .api import common as apicommon
+from .utils import clogger
+from .common import meta
+from .storage import Storage
+from .cache import Cache
 
 # Initialize logging
 logger = logging.getLogger(__name__)

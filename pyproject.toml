@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "labots"
+version = "2.0.0"
+description = "Flexible IRC bot framework"
+authors = ["ShengyuZhang <i@silverrainz.me>"]
+license = "GPL3"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+ircmessage = "0.1.1"
+pydle = "0.8.5"
+PyYAML = "5.1"
+sqlitedict = "1.6.0"
+tornado = "4.5.3"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
